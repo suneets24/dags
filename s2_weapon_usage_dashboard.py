@@ -78,7 +78,7 @@ with temp_match as
 	AND context_data_match_common_matchid_s IS NOT NULL
 	AND match_common_is_private_match_b = FALSE 
 	AND context_headers_title_id_s in ('5597', '5598','5599')
-	AND match_common_gametype_s in ('war', 'dom', 'raid')
+	AND match_common_gametype_s in ('war', 'dom', 'raid', 'war hc', 'dom hc')
 ),
 
 player_match as 
