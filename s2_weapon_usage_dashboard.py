@@ -70,83 +70,97 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
 
 insert_daily_weapons_usage_sql = """ Insert into table as_shared.s2_weapon_usage_dashboard 
 with temp_match as 
-(
-	select distinct context_headers_title_id_s, context_data_match_common_matchid_s, match_common_map_s, match_common_gametype_s, 
-		context_headers_event_id_s, match_common_utc_start_time_i, match_common_life_count_i, 
-		match_common_player_count_i, match_common_has_bots_b 
-	FROM ads_ww2_beta_v2.fact_mp_match_data
-	where dt = date('%s')
-		and context_data_match_common_matchid_s IS NOT NULL
-		AND match_common_is_private_match_b = FALSE 
-		AND context_headers_title_id_s in ('5713', '5714','5715')
-		AND	match_common_gametype_s in ('war', 'dom', 'raid')	
+(select distinct context_headers_title_id_s, context_data_match_common_matchid_s, match_common_map_s, match_common_gametype_s, 
+	context_headers_event_id_s, match_common_utc_start_time_i, match_common_life_count_i,
+	match_common_player_count_i, match_common_has_bots_b 
+	FROM ads_ww2.fact_mp_match_data
+	WHERE dt = date('%s')
+	AND context_data_match_common_matchid_s IS NOT NULL
+	AND match_common_is_private_match_b = FALSE 
+	AND context_headers_title_id_s in ('5597', '5598','5599')
+	AND match_common_gametype_s in ('war', 'dom', 'raid')
 ),
 
 player_match as 
 (
 select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, start_rank_i, start_prestige_i 
-from ads_ww2_beta_v2.fact_mp_match_data_players 
+from ads_ww2.fact_mp_match_data_players 
 where dt = date('%s')
 and context_data_match_common_matchid_s in (select context_data_match_common_matchid_s from temp_match)
 ),
 
 loot_table as 
 (
-select name, reference, description, rarity, productionlevel, category, rarity_s, guid, "group", BaseWeaponReference as weapon_base 
-
-from as_shared.s2_game_mp_loot_stats_beta a 
-where category = 'weapon'
-  group by 1,2,3,4,5,6,7,8,9,10
+select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
+from as_s2.loot_ext a 
+where upper(category) = 'WEAPON'
+group by 1,2,3,4,5,6,7,8,9,10
 ),
+
 
 weapon_usage as 
  (
- select dt as raw_date 
- , case when title_id in ('5714') then 'XBOX'
-		when title_id in ('5715') then 'PS4' 
-		when title_id in ('5713') then 'PC' end as platform
+  select dt as raw_date 
+
+ , case when title_id in ('5598') then 'XBOX'
+
+		when title_id in ('5599') then 'PS4' 
+
+		when title_id in ('5597') then 'PC' end as platform
+
 		, regexp_replace(weapon_base, '_mp', '') as weapon_base
+
 		, weapon_class 
+
 		, game_type
+
 		, rank 
+
 		, prestige 
+
 		, sum(kills) as kills
+
 		, sum(deaths) as deaths
+
 		, sum(duration)/60.0 as duration
+
 		, count(*) as times_used 
+
 		
+
 FROM  
+
  (
-	select distinct a.context_headers_title_id_s as title_id
-	, a.dt 
-	, a.context_data_match_common_matchid_s as match_id
-	, a.loadout_index_i as loadoutid 
-	, a.weapon_guid_l 
-	, d."group" as weapon_class
-	, d.reference as weapon_description 
-	, d.weapon_base 
-	, b.match_common_gametype_s game_type 
-	, c.client_gamer_tag_s as gamer_tag
-	, c.start_rank_i as rank
-	, c.start_prestige_i as prestige
-  	, a.kills_i as kills
-	, a.deaths_i as deaths 
-	, a.time_in_use_seconds_i as duration 
-	, a.context_data_players_score_i as score
-	, b.match_common_map_s as map_description
-	from ads_ww2_beta_v2.fact_mp_match_data_players_weaponstats a 
-	join temp_match b 
-	on a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
-	join player_match c 
-	on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s 
-	and a.context_data_players_index = c.context_data_players_index 
-	join loot_table d 
-	on a.weapon_guid_l = d.guid
-	where a.dt = date('%s')
-	and a.time_in_use_seconds_i > 0 
-	) 
-	group by 1,2,3,4,5,6,7
-	),
+select distinct a.context_headers_title_id_s as title_id
+        , a.dt 
+        , a.context_data_match_common_matchid_s as match_id
+        , a.loadout_index_i as loadoutid 
+        , a.weapon_guid_l 
+        , d.loot_group as weapon_class
+        , d.reference as weapon_description 
+        , d.weapon_base 
+        , b.match_common_gametype_s game_type 
+        , c.client_gamer_tag_s as gamer_tag
+        , c.start_rank_i as rank
+        , c.start_prestige_i as prestige
+        , a.kills_i as kills
+        , a.deaths_i as deaths 
+        , a.time_in_use_seconds_i as duration 
+        , a.context_data_players_score_i as score
+        , b.match_common_map_s as map_description
+    from ads_ww2.fact_mp_match_data_players_weaponstats a 
+    join temp_match b 
+    on a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
+    join player_match c 
+    on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s 
+    and a.context_data_players_index = c.context_data_players_index 
+    join loot_table d 
+    on a.weapon_guid_l = d.loot_id 
+    where a.dt = date('%s')
+    and a.time_in_use_seconds_i > 0 
+    ) 
+group by 1,2,3,4,5,6,7
+),
 
 cross_table as 
 (
@@ -185,9 +199,9 @@ left join
 (
 select raw_date 
 , game_type 
-, case when title_id in ('5714') then 'XBOX' 
-            when title_id in ('5715') then 'PS4' 
-			when title_id in ('5713') then 'PC' end as platform 
+, case when title_id in ('5598') then 'XBOX' 
+            when title_id in ('5599') then 'PS4' 
+			when title_id in ('5597') then 'PC' end as platform 
 , regexp_replace(weapon_base , '_mp', '') as weapon_base 
 , weapon_class
 , rank
@@ -208,7 +222,7 @@ select distinct b.context_headers_title_id_s as title_id
 , b.match_common_gametype_s as game_type 
 , a.victim_weapon_s as weapon_name
 , a.attacker_weapon_s as attacker_weapon
-, d."group" as weapon_class 
+, d.loot_group as weapon_class 
 , d.weapon_base 
 , c.start_rank_i as rank 
 , c.start_prestige_i as prestige 
@@ -226,7 +240,7 @@ select distinct b.context_headers_title_id_s as title_id
 , 1 as deaths 
 , 1 as times_used 
 , a.dt as raw_date 
-from ads_ww2_beta_v2.fact_mp_match_data_lives a 
+from ads_ww2.fact_mp_match_data_lives a 
 
 join temp_match b 
 	
@@ -239,7 +253,7 @@ on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s
 and a.player_index_i = c.context_data_players_index
 
 left join loot_table d -- Weapon Description Mapping 
-on a.victim_weapon_s = d.reference
+on a.victim_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
 where a.dt = date('%s')
@@ -260,7 +274,7 @@ select distinct b.context_headers_title_id_s as title_id
 , b.match_common_gametype_s as game_type 
 , a.attacker_weapon_s as weapon_name
 , a.victim_weapon_s as victim_weapon
-, d."group" as weapon_class 
+, d.loot_group as weapon_class 
 , d.weapon_base 
 , c.start_rank_i as rank 
 , c.start_prestige_i as prestige 
@@ -278,7 +292,7 @@ select distinct b.context_headers_title_id_s as title_id
 , 0 as deaths 
 , 0 as times_used 
 , a.dt as raw_date 
-from ads_ww2_beta_v2.fact_mp_match_data_lives a 
+from ads_ww2.fact_mp_match_data_lives a 
 
 join temp_match b 
 	
@@ -291,7 +305,7 @@ on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s
 and a.attacker_i = c.context_data_players_index
 
 left join loot_table d -- Weapon Description Mapping Table 
-on a.attacker_weapon_s = d.reference
+on a.attacker_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
 where a.dt = date('%s')
