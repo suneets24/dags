@@ -81,6 +81,7 @@ with temp_match as
 	AND match_common_gametype_s in ('war', 'dom', 'raid', 'war hc', 'dom hc')
 ),
 
+
 player_match as 
 (
 select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, start_rank_i, start_prestige_i 
