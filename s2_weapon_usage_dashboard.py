@@ -40,7 +40,7 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         retries=retries,
         retry_delay=retry_delay,
         # schedule_interval=None,
-        pool='hive_default_pool',
+        pool='presto_default_pool',
         op_kwargs={'db_type': query_type,
                    'raw_sql': sql,
                    'expected_runtime': expected_runtime,
@@ -68,7 +68,7 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
         dag=dag)
 
 
-insert_daily_weapons_usage_sql = """ Insert into table as_shared.s2_weapon_usage_dashboard 
+insert_daily_weapons_usage_sql = """ Insert overwrite table as_shared.s2_weapon_usage_dashboard 
 with temp_match as 
 (select distinct context_headers_title_id_s, context_data_match_common_matchid_s, match_common_map_s, match_common_gametype_s, 
 	context_headers_event_id_s, match_common_utc_start_time_i, match_common_life_count_i,
@@ -342,11 +342,9 @@ on c.raw_date = d.raw_date
 --),""" %(stats_date, stats_date, stats_date, stats_date, stats_date)
 
 insert_daily_weapons_usage_task = qubole_operator('insert_daily_weapons_usage',
-                                              insert_daily_weapons_usage_sql, 6, timedelta(seconds=600), dag)
+                                              insert_daily_weapons_usage_sql, 2, timedelta(seconds=600), dag)
 
 
 # Wire up the DAG
 insert_daily_weapons_usage_task.set_upstream(start_time_task)
-##create_lookup_weapons_zm_task.set_upstream(drop_lookup_weapons_zm_task)
-##insert_lookup_weapons_zm_task.set_upstream(create_lookup_weapons_zm_task)
-##export_as_kf_lookup_weapon_zm_task.set_upstream(insert_lookup_weapons_zm_task)
+
