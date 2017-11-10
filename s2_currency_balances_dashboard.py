@@ -24,7 +24,7 @@ dag = airflow.DAG(dag_id='s2_currency_balance_dashboard',
                   )
 
 # Start running at this time
-start_time_task = TimeSensor(target_time=time(6, 00),
+start_time_task = TimeSensor(target_time=time(6, 30),
                              task_id='start_time_task',
                              dag=dag
                              )
