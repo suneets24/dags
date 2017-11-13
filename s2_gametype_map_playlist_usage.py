@@ -303,6 +303,8 @@ Select d.monday_date
 			and score_i between 0 and 15000 
 			and total_xp_i between 0 and 40000 
 			and utc_disconnect_time_s_i >= utc_connect_time_s_i 
+                        and context_data_match_common_utc_start_time_i > 0 
+			and utc_connect_time_s_i > 0
 			and spawns_i > 0 
 			and context_data_match_common_playlist_id_i <> 0 
 			) a 
