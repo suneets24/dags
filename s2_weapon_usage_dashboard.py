@@ -166,7 +166,7 @@ group by 1,2,3,4,5,6,7
 cross_table as 
 (
 select * 
-FROM (select distinct rank from weapon_usage) c1
+FROM (select distinct rank from weapon_usage where rank <= 54) c1
 CROSS JOIN (select distinct game_type from weapon_usage) c2 
 CROSS JOIN (select distinct platform from weapon_usage) c3
 CROSS JOIN (SELECT distinct raw_date, weapon_base, weapon_class from weapon_usage) c4 
