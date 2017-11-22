@@ -30,8 +30,7 @@ start_time_task = TimeSensor(target_time=time(7, 00),
                              )
 
 current_date = (datetime.now()).date()
-stats_date = current_date - timedelta(days=2)
-stats_date2 = current_date - timedelta(days=1)
+stats_date = current_date - timedelta(days=1)
 
 def qubole_operator(task_id, sql, retries, retry_delay, dag):
     return PythonOperator(
@@ -204,7 +203,7 @@ join
 	(select dt, context_headers_title_id_s, count(distinct context_headers_user_id_s) as unique_users from temp_inventory_data where dt = date('%s') 
     group by 1,2) 
     group by 1 ) Z 
-on 1=1 ''' %(stats_date, start_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date) 
+on 1=1 ''' %(stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date) 
 
 insert_daily_inventory_acquisition_task = qubole_operator('insert_daily_inventory_acquisition',
                                               insert_daily_inventory_acquisition_sql, 2, timedelta(seconds=600), dag)
