@@ -19,7 +19,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 10, 21),
+    'start_date': datetime(2017, 11, 21),
     'schedule_interval': '@daily'
 }
 
@@ -210,9 +210,106 @@ on a.dt = b.dt
 group by 1,2,5,6
 order by 1,2,3 """ % (stats_date, stats_date, stats_date, stats_date, stats_date) 
 
+## Create a task for Armory credits Gain SQL
+
 insert_armory_credits_gain_task = qubole_operator('insert_armory_credits_gain',
                                               insert_armory_credits_gain_sql, 2, timedelta(seconds=600), dag)
+
+## SQL for Crates Gain Per Day 
+
+insert_crates_gain_sql = '''Insert overwrite table as_s2.s2_common_rare_crates_gain_source  
+with temp_inventory_items as 
+(
+
+-- Append all the source datas from Market Data Inventory Items 
+-- Item Id 1 and 2 are present in only the below mentioned two tables 
+
+select a.* 
+from 
+(
+select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l, 'Award Product' as event_info_reason_s 
+from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
+where dt >= date('%s')
+and item_id_l in (1,2,5,6) 
+
+union all 
+
+select a.dt, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l, a.quantity_old_l, a.quantity_new_l, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
+from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems a 
+left join ads_ww2.fact_mkt_consumeawards_data b 
+
+on a.context_headers_user_id_s = b.context_headers_user_id_s 
+and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
+and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
+where a.dt >= date('%s')
+and a.item_id_l in (1,2,5,6) 
+
+union all 
+
+select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l, 'Purchase Skus' as event_info_reason_s 
+from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
+where dt >= date('%s')
+and item_id_l in (1,2,5,6) 
+) a 
+
+join 
+
+-- Consider only the users who have played at least one public match 
+
+ (select distinct dt, context_headers_title_id_s, context_data_players_client_user_id_l 
+ from ads_ww2.fact_mp_match_data_players where dt >= date('%s')
+and context_data_match_common_is_private_match_b = FALSE) c 
+on a.dt = c.dt 
+and a.context_headers_title_id_s = c.context_headers_title_id_s
+and a.context_headers_user_id_s = cast(c.context_data_players_client_user_id_l as varchar)
+) 
+
+-- Marking the Crate Types
+-- Grouping Event Reasons based on the character sequences present in the event reason info 
+
+select case when item_id_l = 1 then 'MP Common Crate' 
+                when item_id_l = 2 then 'MP Rare Crate' 
+				when item_id_l = 5 then 'ZM Common Crate' 
+				when item_id_l = 6 then 'ZM Rare Crate' end as crate_type
+	, case when event_info_reason_s like '%%daily_ch%%' then 'Daily Challenge' 
+	       when event_info_reason_s like '%%weekly_ch%%' then 'Weekly Chalenge' 
+		   when event_info_reason_s like '%%contract%%' then 'Contracts' 
+		   when event_info_reason_s like '%%social_rank%%' then 'Social Rank Progress' 
+		   when event_info_reason_s like '%%gear_bitfield_zm%%' then 'Zombies Gear' 
+		   when event_info_reason_s like '%%player_level%%' then 'MP Player Level Progress' 
+		   when event_info_reason_s like '%%special_ch%%' then 'Special Challenges' 
+		   when event_info_reason_s like '%%watch_sd%%' then 'Watch Supply Drop' 
+		   when event_info_reason_s like '%%hq_tutorial%%' then 'HQ Tutorial Complete' 
+		   when event_info_reason_s like '%%killed_boss%%' then 'ZM Boss Kill'
+		   when event_info_reason_s like '%%player_zm_level%%' then 'ZM Player Level Progress' 
+		   else event_info_reason_s end as event_group 
+	, event_info_reason_s 
+	-- Only Consider the events which are of gain type 
+	, sum(case when quantity_new_l > quantity_old_l then quantity_new_l - quantity_old_l else 0 end) as sum_crates_gain 
+	-- Get Count of Users who actually had change for the particular crate type and event reason 
+	, count(distinct context_headers_user_id_s) as users_with_crate_change 
+	-- Map Unique users of the day from Source temporaru table 
+	, b.unique_users as total_dau, a.dt
+from temp_inventory_items a 
+	join 
+( 
+select dt, sum(unique_users) as unique_users 
+from 
+(select dt, context_headers_title_id_s, count(distinct context_data_players_client_user_id_l) as unique_users 
+from ads_ww2.fact_mp_match_data_players 
+where dt >= date('%s')
+and context_data_match_common_is_private_match_b = FALSE 
+group by 1,2)
+group by 1 
+) b 
+on a.dt = b.dt 
+where a.quantity_new_l > a.quantity_old_l
+group by 1,2,3, 6,7''' %(stats_date, stats_date, stats_date, stats_date, stats_date) 
+
+insert_crates_gain_task = qubole_operator('insert_crates_gain',
+                                              insert_crates_gain_sql, 2, timedelta(seconds=600), dag)
+
 											  
 # Wire up the DAG
 insert_armory_credits_gain_task.set_upstream(start_time_task)
-
+insert_crates_gain_task.set_upstream(start_time_task)
