@@ -147,7 +147,8 @@ and a.context_headers_user_id_s = c.context_headers_user_id_s
 group by 1,2,3,4
 )
 group by 1,2,3 
-) 
+)
+where currency_id = 'Armory Credit'  
 group by 1,3""" %(stats_date, stats_date, stats_date, stats_date, stats_date) 
 
 insert_currency_balance_task = qubole_operator('daily_end_of_day_currency_balance',
