@@ -69,7 +69,161 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
 
 		
 insert_daily_gametype_maps_playlist_usage_sql = """Insert overwrite table as_shared.s2_gametype_maps_playlist_dashboard 
-with war_mode_agg as 
+with first_round as
+(
+  select distinct  a.context_headers_title_id_s 
+  ,a.match_common_gametype_s 
+  , a.match_common_map_s 
+  , a.context_data_match_common_playlist_id_i 
+  , a.context_data_match_common_matchid_s 
+  , a.axisgamemodedata_ai 
+  , a.axisobj_i 
+  , a.match_common_utc_start_time_i 
+  , a.match_common_utc_end_time_i
+  , a.matchduration 
+  , case when a.alliesgamemodedata_ai[1] > 0 then alliesgamemodedata_ai else a.axisgamemodedata_ai end as first_round_data 
+  , case when alliesgamemodedata_ai[1] > 0 then alliesobj_i else axisobj_i end as first_round_obj 
+  , a.dt 
+ from ads_ww2.fact_mp_match_data a 
+  where a.dt = date('%s') 
+  and a.match_common_gametype_s in ('raid' , 'raid hc') 
+  and a.match_common_previous_match_id_s = ''
+  and a.context_data_match_common_playlist_id_i <> 0
+),
+
+second_round as 
+(
+  select distinct  a.context_headers_title_id_s 
+  ,a.match_common_gametype_s 
+  , a.match_common_map_s 
+  , a.context_data_match_common_playlist_id_i 
+  , a.context_data_match_common_matchid_s 
+  , a.axisgamemodedata_ai 
+  , a.axisobj_i 
+  , a.match_common_utc_start_time_i 
+  , a.match_common_utc_end_time_i
+  , a.matchduration 
+  , a.match_common_previous_match_id_s 
+  , case when a.alliesgamemodedata_ai[1] > 0 then alliesgamemodedata_ai else a.axisgamemodedata_ai end as second_round_data 
+  , case when alliesgamemodedata_ai[1] > 0 then alliesobj_i else axisobj_i end as second_round_obj 
+  , a.dt 
+ from ads_ww2.fact_mp_match_data a 
+  where a.dt = date('%s') 
+  and a.match_common_gametype_s in ('raid' , 'raid hc') 
+  and a.match_common_previous_match_id_s <> ''
+  and a.context_data_match_common_playlist_id_i <> 0
+),
+
+first_round_players AS
+(
+  select distinct a.*, b.context_data_players_client_user_id_l, b.disconnect_reason_s
+  from first_round a join  ads_ww2.fact_mp_match_data_players b
+  on a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
+  where b.utc_connect_time_s_i <> 0 
+),
+
+second_round_players AS
+(
+  select distinct a.*, b.context_data_players_client_user_id_l, b.disconnect_reason_s
+  from second_round a join ads_ww2.fact_mp_match_data_players b
+  on a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
+  where b.utc_connect_time_s_i <> 0
+), 
+
+temp1 as 
+(select distinct a.context_headers_title_id_s, a.context_data_match_common_matchid_s as allies_match, a.first_round_data 
+, a.first_round_obj, a.matchduration as allies_matchduration, a.match_common_utc_end_time_i, a.match_common_gametype_s 
+, a.match_common_map_s , a.context_data_match_common_playlist_id_i
+, b.match_common_utc_start_time_i, b.context_data_match_common_matchid_s as axis_match, b.second_round_data, b.second_round_obj 
+, b.matchduration as axis_matchduration, a.dt 
+from first_round a join second_round b 
+on a.dt = b.dt 
+and a.context_headers_title_id_s =  b.context_headers_title_id_s
+--and a.match_common_utc_end_time_i >= b.match_common_utc_start_time_i - 60 
+--and a.match_common_utc_end_time_i <= b.match_common_utc_start_time_i
+--and a.context_headers_user_id_s = b.context_headers_user_id_s 
+ and a.context_data_match_common_matchid_s = b.match_common_previous_match_id_s
+and a.match_common_gametype_s = b.match_common_gametype_s 
+and a.match_common_map_s = b.match_common_map_s
+),
+
+temp2 as
+(
+select *, count(*) over(partition by allies_match) as allies_N, count(*) over(partition by axis_match) as axis_N from temp1
+),
+
+war_tab AS
+(
+	select *, concat(cast (allies_match as varchar), cast(axis_match as varchar)) as concat_matchid,  (allies_matchduration + axis_matchduration) as matchduration  from temp2
+    where allies_N = 1 and axis_N = 1
+),
+
+
+player_mp AS 
+(
+  select distinct e.* 
+  from (select a.*, b.context_data_players_client_user_id_l, b.disconnect_reason_s
+		from war_tab a join first_round_players b 
+		on a.allies_match = b.context_data_match_common_matchid_s 
+		where b.disconnect_reason_s = 'EXE_DISCONNECTED'
+		union all 
+		select c.*, d.context_data_players_client_user_id_l, d.disconnect_reason_s
+		from war_tab c join second_round_players d 
+		on c.axis_match = d.context_data_match_common_matchid_s 
+		where d.disconnect_reason_s in ('EXE_DISCONNECTED', 'EXE_MATCHENDED')
+		) e 
+),
+
+agg_war_match_disconnects as 
+(
+select raw_date, description, game_type, playlist_id, map_name, count(distinct matchid) as num_matches 
+, sum(duration_total) as match_duration 
+, sum(early_quits) as early_quits 
+, sum(all_quits) as all_quits 
+from 
+(
+select dt as raw_date
+		, concat_matchid as matchid 
+        , case when context_headers_title_id_s in ('5599') then 'PS4'
+              when context_headers_title_id_s in ('5598') then 'XBOX'
+              when context_headers_title_id_s in ('5597') then 'PC' end as description 
+			  
+-- All these game types description have to be updated with latest descriptions 
+
+		, case when match_common_gametype_s = 'raid' then 'War'
+		       when match_common_gametype_s = 'raid hc' then 'War Hardcore'
+		else match_common_gametype_s 
+        end as game_type 
+
+
+-- Create a separate playlist Id mapping for PC 
+
+, case when context_data_match_common_playlist_id_i = 2 then 'War'
+        else cast(context_data_match_common_playlist_id_i as varchar) 
+     end as playlist_id 
+		
+-- Map Descriptions and their Screen Names 
+
+    ,case when match_common_map_s = 'mp_raid_cobra' then 'Operation Breakout' 
+          when match_common_map_s = 'mp_raid_bulge' then 'Operation Griffin' 	
+          when match_common_map_s = 'mp_raid_aachen' then 'Operation Aachen' 	
+          when match_common_map_s = 'mp_raid_d_day' then 'Operation Neptune' 	  
+	      else match_common_map_s 
+	end as map_name 
+
+ 	,matchduration/60.0 as duration_total -- Get Match Duration 
+	,count(distinct case when disconnect_reason_s = 'EXE_DISCONNECTED' then context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
+	,count(distinct case when disconnect_reason_s in ('EXE_MATCHENDED','EXE_DISCONNECTED')  then context_data_players_client_user_id_l end) as all_quits 
+	from player_mp 
+	group by 1,2,3,4,5,6,7
+) 
+group by 1,2,3,4,5 
+) ,
+
+--select * from agg_war_match_disconnects limit 10
+
+--with 
+war_mode_agg as 
 (
 with temp_lives_war as 
 (
@@ -140,7 +294,7 @@ select a.monday_date
     ,a.platform
 	,a.playlist_id
 	,a.map_name
-	,a.num_matches
+	,coalesce(c.num_matches,a.num_matches) as num_matches 
     ,a.users
 	,coalesce(b.kills, a.kills) as kills 
 	,coalesce(b.deaths, a.deaths) as deaths
@@ -148,10 +302,10 @@ select a.monday_date
 	,a.lives_count 
 	,a.life_time
     ,a.xp
-	,a.match_duration
+	,coalesce(c.match_duration, a.match_duration) as match_duration 
 	,a.play_duration
-	,a.early_quits 
-	,a.all_quits 
+	,coalesce(c.early_quits, a.early_quits ) as early_quits
+	,coalesce(c.all_quits, a.all_quits ) as all_quits 
 	,a.Date_now
 	,a.now 
 	,a.raw_date 
@@ -303,8 +457,6 @@ Select d.monday_date
 			and score_i between 0 and 15000 
 			and total_xp_i between 0 and 40000 
 			and utc_disconnect_time_s_i >= utc_connect_time_s_i 
-                        and context_data_match_common_utc_start_time_i > 0 
-			and utc_connect_time_s_i > 0
 			and spawns_i > 0 
 			and context_data_match_common_playlist_id_i <> 0 
 			) a 
@@ -348,7 +500,14 @@ on a.raw_date = b.raw_date
 and a.platform = b.description 
 and a.game_type = b.game_type 
 and a.playlist_id = b.playlist_id 
-and a.map_name = b.map_name""" %(stats_date, stats_date, stats_date) 
+and a.map_name = b.map_name 
+
+left join agg_war_match_disconnects c 
+on a.raw_date = c.raw_date
+and a.platform = c.description 
+and a.game_type = c.game_type 
+and a.playlist_id = c.playlist_id 
+and a.map_name = c.map_name""" %(stats_date, stats_date, stats_date, stats_date, stats_date) 
 
 insert_daily_gametype_map_playlist_usage_task = qubole_operator('daily_gametype_maps_playlist_usage',
                                               insert_daily_gametype_maps_playlist_usage_sql, 2, timedelta(seconds=600), dag) 
