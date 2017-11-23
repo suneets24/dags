@@ -30,7 +30,7 @@ start_time_task = TimeSensor(target_time=time(6, 30),
                              )
 
 current_date = (datetime.now()).date()
-stats_date = current_date - timedelta(days=2)
+stats_date = current_date - timedelta(days=1)
 
 def qubole_operator(task_id, sql, retries, retry_delay, dag):
     return PythonOperator(
