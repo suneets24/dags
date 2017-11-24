@@ -30,7 +30,8 @@ start_time_task = TimeSensor(target_time=time(6, 00),
                              )
 
 current_date = (datetime.now()).date()
-##stats_date = current_date - timedelta(days=2)
+stats_date2 = current_date - timedelta(days=2)
+stats_date = current_date - timedelta(days=1)
 
 def qubole_operator(task_id, sql, retries, retry_delay, dag):
     return PythonOperator(
@@ -67,9 +68,18 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
         templates_dict=None,
         dag=dag)
 
-for i in range(1,3):
-    stats_date = current_date - timedelta(days=i)
-    ("insert_daily_gametype_maps_playlist_usage_sql%s" %(i)) = """Insert overwrite table as_shared.s2_gametype_maps_playlist_dashboard 
+## Define function to pass different parameter for string evaluations 
+
+def evaluate_queries(query, eval_param,times_var):
+    times_var = times_var + 1
+    pass_param = []
+    for i in range(1,times_var):
+        pass_param.append('eval_param')
+    pass_param = ','.join(str(x) for x in pass_param)
+    query_evaluated = query %(eval(pass_param))
+    return query_evaluated
+
+insert_daily_gametype_maps_playlist_usage_sql = """Insert overwrite table as_shared.s2_gametype_maps_playlist_dashboard 
 with first_round as
 (
   select distinct  a.context_headers_title_id_s 
@@ -508,10 +518,15 @@ on a.raw_date = c.raw_date
 and a.platform = c.description 
 and a.game_type = c.game_type 
 and a.playlist_id = c.playlist_id 
-and a.map_name = c.map_name""" %(stats_date, stats_date, stats_date, stats_date, stats_date) 
+and a.map_name = c.map_name""" 
+##%(stats_date, stats_date, stats_date, stats_date, stats_date) 
 
-    ("insert_daily_gametype_map_playlist_usage_task%s" %(i)) = qubole_operator('daily_gametype_maps_playlist_usage',
-                                              ("insert_daily_gametype_maps_playlist_usage_sql%s" %(i)), 2, timedelta(seconds=600), dag) 
+insert_daily_gametype_map_playlist_usage_two_days_task = qubole_operator('daily_gametype_maps_playlist_usage_two_days',
+                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, stats_date2,5), 2, timedelta(seconds=600), dag) 
+insert_daily_gametype_map_playlist_usage_one_days_task = qubole_operator('daily_gametype_maps_playlist_usage_one_days',
+                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, stats_date,5), 2, timedelta(seconds=600), dag) 
 
-    # Wire up the DAG , Setting Dependency of the tasks
-    ("insert_daily_gametype_map_playlist_usage_task%s" %(i)).set_upstream(start_time_task)
+# Wire up the DAG , Setting Dependency of the tasks
+insert_daily_gametype_map_playlist_usage_two_days_task.set_upstream(start_time_task)
+insert_daily_gametype_map_playlist_usage_one_days_task.set_upstream(start_time_task)
+
