@@ -227,14 +227,20 @@ with temp_inventory_items as
 select a.* 
 from 
 (
-select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l, 'Award Product' as event_info_reason_s 
+select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l
+, case when quantity_old_l is null then 0 else quantity_old_l end as quantity_old_l
+, case when quantity_new_l is null then 0 else quantity_new_l end as quantity_new_l
+, 'Award Product' as event_info_reason_s 
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
 and item_id_l in (1,2,5,6) 
 
 union all 
 
-select a.dt, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l, a.quantity_old_l, a.quantity_new_l, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
+select a.dt, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l
+, case when  a.quantity_old_l is null then 0 else a.quantity_old_l end as quantity_old_l
+, case when  a.quantity_new_l is null then 0 else a.quantity_new_l end as quantity_new_l
+, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems a 
 left join ads_ww2.fact_mkt_consumeawards_data b 
 
@@ -246,7 +252,10 @@ and a.item_id_l in (1,2,5,6)
 
 union all 
 
-select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l, 'Purchase Skus' as event_info_reason_s 
+select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l 
+, case when quantity_old_l is null then 0 else quantity_old_l end as quantity_old_l
+, case when quantity_new_l is null then 0 else quantity_new_l end as quantity_new_l
+, 'Purchase Skus' as event_info_reason_s 
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
 and item_id_l in (1,2,5,6) 
@@ -288,7 +297,7 @@ select case when item_id_l = 1 then 'MP Common Crate'
 	, sum(case when quantity_new_l > quantity_old_l then quantity_new_l - quantity_old_l else 0 end) as sum_crates_gain 
 	-- Get Count of Users who actually had change for the particular crate type and event reason 
 	, count(distinct context_headers_user_id_s) as users_with_crate_change 
-	-- Map Unique users of the day from Source temporaru table 
+	-- Map Unique users of the day from Source temporary table 
 	, b.unique_users as total_dau, a.dt
 from temp_inventory_items a 
 	join 
