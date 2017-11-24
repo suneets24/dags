@@ -69,7 +69,7 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
 
 for i in range(1,3):
     stats_date = current_date - timedelta(days=i)
-    insert_daily_gametype_maps_playlist_usage_sql = """Insert overwrite table as_shared.s2_gametype_maps_playlist_dashboard 
+    ("insert_daily_gametype_maps_playlist_usage_sql%s" %(i)) = """Insert overwrite table as_shared.s2_gametype_maps_playlist_dashboard 
 with first_round as
 (
   select distinct  a.context_headers_title_id_s 
@@ -510,8 +510,8 @@ and a.game_type = c.game_type
 and a.playlist_id = c.playlist_id 
 and a.map_name = c.map_name""" %(stats_date, stats_date, stats_date, stats_date, stats_date) 
 
-    insert_daily_gametype_map_playlist_usage_task = qubole_operator('daily_gametype_maps_playlist_usage',
-                                              insert_daily_gametype_maps_playlist_usage_sql, 2, timedelta(seconds=600), dag) 
+    ("insert_daily_gametype_map_playlist_usage_task%s" %(i)) = qubole_operator('daily_gametype_maps_playlist_usage',
+                                              ("insert_daily_gametype_maps_playlist_usage_sql%s" %(i)), 2, timedelta(seconds=600), dag) 
 
     # Wire up the DAG , Setting Dependency of the tasks
-    insert_daily_gametype_map_playlist_usage_task.set_upstream(start_time_task)
+    ("insert_daily_gametype_map_playlist_usage_task%s" %(i)).set_upstream(start_time_task)
