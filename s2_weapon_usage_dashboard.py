@@ -94,7 +94,7 @@ and context_data_match_common_matchid_s in (select context_data_match_common_mat
 loot_table as 
 (
 select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
-from as_s2.loot_ext a 
+from as_s2.loot_v4_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
 ),
@@ -369,7 +369,7 @@ and context_data_match_common_matchid_s in (select context_data_match_common_mat
 loot_table as 
 (
 select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
-from as_s2.loot_ext a 
+from as_s2.loot_v4_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
 ),
@@ -623,4 +623,4 @@ insert_daily_weapons_usage_a_day_back_task = qubole_operator('insert_daily_weapo
 
 # Wire up the DAG
 insert_daily_weapons_usage_task.set_upstream(start_time_task)
-insert_daily_weapons_usage_a_day_back_task.set_upstream(start_time_task)
+insert_daily_weapons_usage_a_day_back_task.set_upstream(insert_daily_weapons_usage_task)

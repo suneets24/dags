@@ -531,5 +531,5 @@ insert_daily_gametype_map_playlist_usage_one_days_task = qubole_operator('daily_
 
 # Wire up the DAG , Setting Dependency of the tasks
 insert_daily_gametype_map_playlist_usage_two_days_task.set_upstream(start_time_task)
-insert_daily_gametype_map_playlist_usage_one_days_task.set_upstream(start_time_task)
+insert_daily_gametype_map_playlist_usage_one_days_task.set_upstream(insert_daily_gametype_map_playlist_usage_two_days_task)
 
