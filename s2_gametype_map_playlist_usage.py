@@ -191,6 +191,7 @@ select raw_date, description, game_type, playlist_id, map_name, count(distinct m
 , sum(duration_total) as match_duration 
 , sum(early_quits) as early_quits 
 , sum(all_quits) as all_quits 
+, sum(users) as users 
 from 
 (
 select dt as raw_date
@@ -225,6 +226,7 @@ select dt as raw_date
  	,matchduration/60.0 as duration_total -- Get Match Duration 
 	,count(distinct case when disconnect_reason_s = 'EXE_DISCONNECTED' then context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
 	,count(distinct case when disconnect_reason_s in ('EXE_MATCHENDED','EXE_DISCONNECTED')  then context_data_players_client_user_id_l end) as all_quits 
+	, count(distinct context_data_players_client_user_id_l) as users 
 	from player_mp 
 	group by 1,2,3,4,5,6,7
 ) 
@@ -306,7 +308,7 @@ select a.monday_date
 	,a.playlist_id
 	,a.map_name
 	,coalesce(c.num_matches,a.num_matches) as num_matches 
-    ,a.users
+    ,coalesce(c.users, a.users) as users 
 	,coalesce(b.kills, a.kills) as kills 
 	,coalesce(b.deaths, a.deaths) as deaths
 	,a.score
