@@ -220,27 +220,19 @@ insert_armory_credits_gain_task = qubole_operator('insert_armory_credits_gain',
 insert_crates_gain_sql = '''Insert overwrite table as_s2.s2_common_rare_crates_gain_source  
 with temp_inventory_items as 
 (
-
--- Append all the source datas from Market Data Inventory Items 
--- Item Id 1 and 2 are present in only the below mentioned two tables 
-
-select a.* 
-from 
-(
-select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l
-, case when quantity_old_l is null then 0 else quantity_old_l end as quantity_old_l
-, case when quantity_new_l is null then 0 else quantity_new_l end as quantity_new_l
-, 'Award Product' as event_info_reason_s 
+  
+select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Award Product' as event_info_reason_s 
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
-and item_id_l in (1,2,5,6) 
-
-union all 
-
-select a.dt, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l
-, case when  a.quantity_old_l is null then 0 else a.quantity_old_l end as quantity_old_l
-, case when  a.quantity_new_l is null then 0 else a.quantity_new_l end as quantity_new_l
-, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
+where item_id_l in (1,2,5,6) 
+  
+union all
+  
+select distinct a.dt, a.context_data_mmp_transaction_id_s, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems a 
 left join ads_ww2.fact_mkt_consumeawards_data b 
 
@@ -248,30 +240,19 @@ on a.context_headers_user_id_s = b.context_headers_user_id_s
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
 where a.dt >= date('%s')
-and a.item_id_l in (1,2,5,6) 
+where a.item_id_l in (1,2,5,6) 
 
 union all 
 
-select dt, context_headers_title_id_s, context_headers_user_id_s, item_id_l 
-, case when quantity_old_l is null then 0 else quantity_old_l end as quantity_old_l
-, case when quantity_new_l is null then 0 else quantity_new_l end as quantity_new_l
-, 'Purchase Skus' as event_info_reason_s 
+select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Purchase Skus' as event_info_reason_s 
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
-and item_id_l in (1,2,5,6) 
-) a 
+where item_id_l in (1,2,5,6) 
 
-join 
-
--- Consider only the users who have played at least one public match 
-
- (select distinct dt, context_headers_title_id_s, context_data_players_client_user_id_l 
- from ads_ww2.fact_mp_match_data_players where dt >= date('%s')
-and context_data_match_common_is_private_match_b = FALSE) c 
-on a.dt = c.dt 
-and a.context_headers_title_id_s = c.context_headers_title_id_s
-and a.context_headers_user_id_s = cast(c.context_data_players_client_user_id_l as varchar)
 ) 
+  
 
 -- Marking the Crate Types
 -- Grouping Event Reasons based on the character sequences present in the event reason info 
@@ -304,16 +285,15 @@ from temp_inventory_items a
 ( 
 select dt, sum(unique_users) as unique_users 
 from 
-(select dt, context_headers_title_id_s, count(distinct context_data_players_client_user_id_l) as unique_users 
-from ads_ww2.fact_mp_match_data_players 
+(select dt, context_headers_title_id_s, count(distinct context_headers_user_id_s) as unique_users 
+from ads_ww2.fact_session_data 
 where dt >= date('%s')
-and context_data_match_common_is_private_match_b = FALSE 
 group by 1,2)
 group by 1 
-) b 
+) b  
 on a.dt = b.dt 
 where a.quantity_new_l > a.quantity_old_l
-group by 1,2,3, 6,7''' %(stats_date, stats_date, stats_date, stats_date, stats_date) 
+group by 1,2,3, 6,7''' %(stats_date, stats_date, stats_date, stats_date) 
 
 insert_crates_gain_task = qubole_operator('insert_crates_gain',
                                               insert_crates_gain_sql, 2, timedelta(seconds=600), dag)
