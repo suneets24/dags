@@ -226,7 +226,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
-where item_id_l in (1,2,5,6) 
+and item_id_l in (1,2,5,6) 
   
 union all
   
@@ -240,7 +240,7 @@ on a.context_headers_user_id_s = b.context_headers_user_id_s
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
 where a.dt >= date('%s')
-where a.item_id_l in (1,2,5,6) 
+and a.item_id_l in (1,2,5,6) 
 
 union all 
 
@@ -249,7 +249,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
-where item_id_l in (1,2,5,6) 
+and item_id_l in (1,2,5,6) 
 
 ) 
   
