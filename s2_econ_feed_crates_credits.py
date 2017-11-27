@@ -222,8 +222,8 @@ with temp_inventory_items as
 (
   
 select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Award Product' as event_info_reason_s 
-  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
-,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
 and item_id_l in (1,2,5,6) 
@@ -231,8 +231,8 @@ and item_id_l in (1,2,5,6)
 union all
   
 select distinct a.dt, a.context_data_mmp_transaction_id_s, a.context_headers_title_id_s, a.context_headers_user_id_s, a.item_id_l, coalesce(b.event_info_reason_s , 'Missing Reasons') as event_info_reason_s
-  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
-,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems a 
 left join ads_ww2.fact_mkt_consumeawards_data b 
 
@@ -245,8 +245,8 @@ and a.item_id_l in (1,2,5,6)
 union all 
 
 select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Purchase Skus' as event_info_reason_s 
-  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_fixed
-,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_fixed
+  ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
+,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date('%s')
 and item_id_l in (1,2,5,6) 
