@@ -85,7 +85,7 @@ with temp_match as
 
 player_match as 
 (
-select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, start_rank_i, start_prestige_i 
+select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, start_rank_i, start_prestige_i 
 from ads_ww2.fact_mp_match_data_players 
 where dt = date('%s')
 and context_data_match_common_matchid_s in (select context_data_match_common_matchid_s from temp_match)
@@ -171,7 +171,7 @@ FROM (select distinct rank from weapon_usage where rank <= 54) c1
 CROSS JOIN (select distinct game_type from weapon_usage) c2 
 CROSS JOIN (select distinct platform from weapon_usage) c3
 CROSS JOIN (SELECT distinct raw_date, weapon_base, weapon_class from weapon_usage) c4 
-CROSS JOIN (select distinct prestige from weapon_usage) c5
+CROSS JOIN (select distinct prestige from weapon_usage where prestige between 0 and 11) c5
 )
 
 
@@ -260,7 +260,7 @@ on a.victim_weapon_guid_l = d.loot_id
 -- Lives Data Filters 
 where a.dt = date('%s')
 and a.duration_ms_i > 0 
-and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
+--and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
 and a.victim_weapon_s <> 'none' 
 
@@ -312,7 +312,7 @@ on a.attacker_weapon_guid_l = d.loot_id
 -- Lives Data Filters 
 where a.dt = date('%s')
 and a.duration_ms_i > 0 
-and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
+--and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
 and a.attacker_weapon_s <> 'none' 
 
@@ -360,7 +360,7 @@ with temp_match as
 
 player_match as 
 (
-select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, start_rank_i, start_prestige_i 
+select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, start_rank_i, start_prestige_i 
 from ads_ww2.fact_mp_match_data_players 
 where dt = date('%s')
 and context_data_match_common_matchid_s in (select context_data_match_common_matchid_s from temp_match)
@@ -446,7 +446,7 @@ FROM (select distinct rank from weapon_usage where rank <= 54) c1
 CROSS JOIN (select distinct game_type from weapon_usage) c2 
 CROSS JOIN (select distinct platform from weapon_usage) c3
 CROSS JOIN (SELECT distinct raw_date, weapon_base, weapon_class from weapon_usage) c4 
-CROSS JOIN (select distinct prestige from weapon_usage) c5
+CROSS JOIN (select distinct prestige from weapon_usage where prestige between 0 and 11) c5
 )
 
 
@@ -535,7 +535,7 @@ on a.victim_weapon_guid_l = d.loot_id
 -- Lives Data Filters 
 where a.dt = date('%s')
 and a.duration_ms_i > 0 
-and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
+--and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
 and a.victim_weapon_s <> 'none' 
 
@@ -587,7 +587,7 @@ on a.attacker_weapon_guid_l = d.loot_id
 -- Lives Data Filters 
 where a.dt = date('%s')
 and a.duration_ms_i > 0 
-and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
+--and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
 and a.attacker_weapon_s <> 'none' 
 
