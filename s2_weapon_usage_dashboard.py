@@ -350,7 +350,7 @@ with temp_match as
 	context_headers_event_id_s, match_common_utc_start_time_i, match_common_life_count_i,
 	match_common_player_count_i, match_common_has_bots_b 
 	FROM ads_ww2.fact_mp_match_data
-	WHERE dt = date '{{DS_DATE_ID}}'
+	WHERE dt = date '{{DS_DATE_ADD(0)}}'
 	AND context_data_match_common_matchid_s IS NOT NULL
 	AND match_common_is_private_match_b = FALSE 
 	AND context_headers_title_id_s in ('5597', '5598','5599')
@@ -362,7 +362,7 @@ player_match as
 (
 select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, start_rank_i, start_prestige_i 
 from ads_ww2.fact_mp_match_data_players 
-where dt = date '{{DS_DATE_ID}}'
+where dt = date '{{DS_DATE_ADD(0)}}'
 and context_data_match_common_matchid_s in (select context_data_match_common_matchid_s from temp_match)
 ),
 
@@ -433,7 +433,7 @@ select distinct a.context_headers_title_id_s as title_id
     and a.context_data_players_index = c.context_data_players_index 
     join loot_table d 
     on a.weapon_guid_l = d.loot_id 
-    where a.dt = date '{{DS_DATE_ID}}'
+    where a.dt = date '{{DS_DATE_ADD(0)}}'
     and a.time_in_use_seconds_i > 0 
     ) 
 group by 1,2,3,4,5,6,7
@@ -533,7 +533,7 @@ left join loot_table d -- Weapon Description Mapping
 on a.victim_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
-where a.dt = date '{{DS_DATE_ID}}'
+where a.dt = date '{{DS_DATE_ADD(0)}}'
 and a.duration_ms_i > 0 
 --and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
@@ -585,7 +585,7 @@ left join loot_table d -- Weapon Description Mapping Table
 on a.attacker_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
-where a.dt = date '{{DS_DATE_ID}}'
+where a.dt = date '{{DS_DATE_ADD(0)}}'
 and a.duration_ms_i > 0 
 --and (a.spawn_pos_ai[1] > 0 or a.spawn_pos_ai[2] > 0 or a.spawn_pos_ai[3] > 0) 
 and a.means_of_death_s <> 'none' 
