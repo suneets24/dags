@@ -15,7 +15,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 10, 21),
+    'start_date': datetime(2017, 12, 06),
     'schedule_interval': '@daily'
 }
 
