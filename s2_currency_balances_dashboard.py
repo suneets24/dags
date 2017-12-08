@@ -67,7 +67,7 @@ select distinct context_headers_title_id_s
 ,balance_old_l 
 ,dt
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_currencybalances 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 
 
 union all 
@@ -85,7 +85,7 @@ select distinct context_headers_title_id_s
 ,balance_old_l
 , dt 
 from ads_ww2.fact_mkt_pawnitems_data_userdatachanges_currencybalances 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 
 union all 
 
@@ -102,11 +102,11 @@ select distinct context_headers_title_id_s
 ,balance_old_l 
 , dt
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_currencybalances  
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 ) 
 
 
-select currency_id, avg(currency_balance) as currency_balance, date('%s') as dt
+select currency_id, avg(currency_balance) as currency_balance, date '{{DS_DATE_ADD(0)}}' as dt
 from 
 (
 select context_headers_title_id_s, context_headers_user_id_s, case when currency_id_l = 1 then 'XP' 
@@ -136,20 +136,19 @@ select dt, a.context_headers_title_id_s, a.context_headers_user_id_s, currency_i
 , (case when balance_new_l < balance_old_l then (balance_old_l - balance_new_l )  else 0 end) as currency_spent 
 from temp_currecny_balances a join 
 (
-select distinct context_headers_title_id_s, context_headers_user_id_s from 
-temp_currecny_balances
-where dt = date('%s')
---and context_data_match_common_is_private_match_b = False 
+select distinct context_headers_title_id_s, client_user_id_l from 
+ads_ww2.fact_session_data
+where dt = date '{{DS_DATE_ADD(0)}}'
 ) c 
 on a.context_headers_title_id_s = c.context_headers_title_id_s 
-and a.context_headers_user_id_s = c.context_headers_user_id_s
+and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 ) 
 group by 1,2,3,4
 )
 group by 1,2,3 
 )
 where currency_id = 'Armory Credit'  
-group by 1,3""" %(stats_date, stats_date, stats_date, stats_date, stats_date) 
+group by 1,3""" 
 
 insert_currency_balance_task = qubole_operator('daily_end_of_day_currency_balance',
                                               insert_currency_balance_sql, 2, timedelta(seconds=600), dag) 
