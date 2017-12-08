@@ -140,35 +140,35 @@ temp_inventory_data as
 (
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, 0, 0 , dt
 from ads_ww2.fact_mkt_consumeinventoryitems_data_eventinfo_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_consumeinventoryitems_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_durableprocess_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_durablerevoke_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_pawnitems_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 union all 
 select context_headers_title_id_s, context_headers_user_id_s, item_id_l, quantity_old_l, quantity_new_l , dt
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
-where dt <= date('%s')
+where dt <= date '{{DS_DATE_ADD(0)}}'
 )
 
 select 'Non-Spenders' as player_type, x.category, x.rarity, x.is_collectible, x.productionlevel, x.pool_size, z.unique_users, y.num_items, y.num_items*pow(z.unique_users, -1), z.dt as raw_date 
@@ -185,11 +185,12 @@ temp_inventory_data a
 join loot_table b 
     on a.item_id_l = b.loot_id 
 join (
-     select distinct context_headers_title_id_s, context_headers_user_id_s 
-	 from temp_inventory_data 
-	 where dt = date('%s') ) c 
+     select distinct context_headers_title_id_s, client_user_id_l 
+	 from ads_ww2.fact_session_data 
+	 where dt = date '{{DS_DATE_ADD(0)}}'
+	 ) c 
     on a.context_headers_title_id_s = c.context_headers_title_id_s 
-    and a.context_headers_user_id_s = c.context_headers_user_id_s
+    and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 group by 1,2,3,4,5
 ) 
 group by 1,2,3,4) y 
@@ -200,10 +201,10 @@ and x.is_collectible = y.is_collectible
 join 
     (select dt, sum(unique_users) as unique_users 
 	from 
-	(select dt, context_headers_title_id_s, count(distinct context_headers_user_id_s) as unique_users from temp_inventory_data where dt = date('%s') 
+	(select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users from ads_ww2.fact_session_data where dt = date '{{DS_DATE_ADD(0)}}'
     group by 1,2) 
     group by 1 ) Z 
-on 1=1 ''' %(stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date, stats_date) 
+on 1=1 ''' 
 
 insert_daily_inventory_acquisition_task = qubole_operator('insert_daily_inventory_acquisition',
                                               insert_daily_inventory_acquisition_sql, 2, timedelta(seconds=600), dag)

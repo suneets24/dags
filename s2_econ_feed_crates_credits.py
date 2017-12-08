@@ -97,7 +97,7 @@ select distinct context_headers_title_id_s
 , 'Pawn Items' as event_info_reason_s 
 , dt 
 from ads_ww2.fact_mkt_pawnitems_data_userdatachanges_currencybalances 
-where dt >= date('%s')
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 
 union all 
@@ -121,7 +121,7 @@ join ads_ww2.fact_mkt_consumeawards_data b
 on a.context_headers_user_id_s = b.context_headers_user_id_s 
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
-where a.dt >= date('%s')
+where a.dt >= '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 
 union all 
@@ -141,20 +141,19 @@ select distinct a.context_headers_title_id_s
 ,'Purchase Skus' as event_info_reason_s 
 ,a.dt
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_currencybalances  a 
-where dt >= date('%s')
+where dt >= '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 ) a join 
 
 -- Considering only the isers who had played at least one public match 
 
 (
-select distinct dt, context_headers_title_id_s, context_data_players_client_user_id_l from ads_ww2.fact_mp_match_data_players 
-where dt >= date('%s')
-and context_data_match_common_is_private_match_b = FALSE
+select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
+where dt >= '{{DS_DATE_ADD(-2)}}'
 ) c 
 on a.dt = c.dt 
 and a.context_headers_title_id_s = c.context_headers_title_id_s 
-and a.context_headers_user_id_s = cast(context_data_players_client_user_id_l as varchar)
+and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 ) 
 
 select currency_id, event_info_reason_s, sum(currency_gained)*pow(b.unique_users,-1) as currency_gained, sum(currency_spent)*pow(b.unique_users,-1) as currency_spent, b.unique_users , a.dt 
@@ -199,16 +198,15 @@ group by 1,2,3,4
 ( 
 select dt, sum(unique_users) as unique_users 
 from 
-( select dt, context_headers_title_id_s, count(distinct context_data_players_client_user_id_l) as unique_users 
-from ads_ww2.fact_mp_match_data_players 
-where dt >= date('%s')
-and context_data_match_common_is_private_match_b = FALSE 
+( select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
+from ads_ww2.fact_session_data 
+where dt >= '{{DS_DATE_ADD(-2)}}'
 group by 1,2 )
 group by 1 
 ) b 
 on a.dt = b.dt 
 group by 1,2,5,6
-order by 1,2,3 """ % (stats_date, stats_date, stats_date, stats_date, stats_date) 
+order by 1,2,3 """
 
 ## Create a task for Armory credits Gain SQL
 
@@ -225,7 +223,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
   ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
-where dt >= date('%s')
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 and item_id_l in (1,2,5,6) 
   
 union all
@@ -239,7 +237,7 @@ left join ads_ww2.fact_mkt_consumeawards_data b
 on a.context_headers_user_id_s = b.context_headers_user_id_s 
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
-where a.dt >= date('%s')
+where a.dt >= date '{{DS_DATE_ADD(-2)}}'
 and a.item_id_l in (1,2,5,6) 
 
 union all 
@@ -248,7 +246,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
   ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
-where dt >= date('%s')
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 and item_id_l in (1,2,5,6) 
 
 ) 
@@ -287,13 +285,13 @@ select dt, sum(unique_users) as unique_users
 from 
 (select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
 from ads_ww2.fact_session_data 
-where dt >= date('%s')
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 group by 1,2)
 group by 1 
 ) b  
 on a.dt = b.dt 
 where a.quantity_new_l > a.quantity_old_l
-group by 1,2,3, 6,7''' %(stats_date, stats_date, stats_date, stats_date) 
+group by 1,2,3, 6,7''' 
 
 insert_crates_gain_task = qubole_operator('insert_crates_gain',
                                               insert_crates_gain_sql, 2, timedelta(seconds=600), dag)
