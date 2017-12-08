@@ -285,7 +285,7 @@ from temp_inventory_items a
 ( 
 select dt, sum(unique_users) as unique_users 
 from 
-(select dt, context_headers_title_id_s, count(distinct context_headers_user_id_s) as unique_users 
+(select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
 from ads_ww2.fact_session_data 
 where dt >= date('%s')
 group by 1,2)
