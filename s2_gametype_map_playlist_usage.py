@@ -96,7 +96,7 @@ with first_round as
   , case when alliesgamemodedata_ai[1] > 0 then alliesobj_i else axisobj_i end as first_round_obj 
   , a.dt 
  from ads_ww2.fact_mp_match_data a 
-  where a.dt = date('%s') 
+  where a.dt = date '{{DS_DATE_ADD(%s)}}' 
   and a.match_common_gametype_s in ('raid' , 'raid hc') 
   and a.match_common_previous_match_id_s = ''
   and a.context_data_match_common_playlist_id_i <> 0
@@ -119,7 +119,7 @@ second_round as
   , case when alliesgamemodedata_ai[1] > 0 then alliesobj_i else axisobj_i end as second_round_obj 
   , a.dt 
  from ads_ww2.fact_mp_match_data a 
-  where a.dt = date('%s') 
+  where a.dt = date '{{DS_DATE_ADD(%s)}}' 
   and a.match_common_gametype_s in ('raid' , 'raid hc') 
   and a.match_common_previous_match_id_s <> ''
   and a.context_data_match_common_playlist_id_i <> 0
@@ -254,7 +254,7 @@ select distinct victim_user_id
 , duration_ms_i 
 , dt from 
 ads_ww2.fact_mp_match_data_lives 
-where dt = date('%s')
+where dt = date '{{DS_DATE_ADD(%s)}}'
 and context_data_match_common_gametype_s in ('raid', 'raid hc')
 and context_data_match_common_is_private_match_b = FALSE 
 and context_headers_title_id_s in ('5597', '5598', '5599')
@@ -464,7 +464,7 @@ Select d.monday_date
 			, total_xp_i as total_xp 
 			, client_is_splitscreen_b as split_screen_flag 
 			FROM ads_ww2.fact_mp_match_data_players 
-			where dt = date('%s')
+			where dt = date '{{DS_DATE_ADD(%s)}}'
 			and (end_kills_i - start_kills_i) >=0 
 			and (end_deaths_i - start_deaths_i) >=0 
 			and score_i between 0 and 15000 
@@ -491,7 +491,7 @@ Select d.monday_date
 			 , matchduration 
 			 ,dt 
 			 FROM ads_ww2.fact_mp_match_data 
-			 where dt = date('%s')
+			 where dt = date '{{DS_DATE_ADD(%s)}}'
 			 and context_data_match_common_matchid_s IS NOT NULL 
 			 AND match_common_is_private_match_b = FALSE 
 			 AND context_headers_title_id_s in ('5597', '5598','5599') 
@@ -526,9 +526,9 @@ and a.map_name = c.map_name"""
 ##%(stats_date, stats_date, stats_date, stats_date, stats_date) 
 
 insert_daily_gametype_map_playlist_usage_two_days_task = qubole_operator('daily_gametype_maps_playlist_usage_two_days',
-                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, stats_date2,5), 2, timedelta(seconds=600), dag) 
+                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, -1,5), 2, timedelta(seconds=600), dag) 
 insert_daily_gametype_map_playlist_usage_one_days_task = qubole_operator('daily_gametype_maps_playlist_usage_one_days',
-                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, stats_date,5), 2, timedelta(seconds=600), dag) 
+                                              evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, 0,5), 2, timedelta(seconds=600), dag) 
 
 # Wire up the DAG , Setting Dependency of the tasks
 insert_daily_gametype_map_playlist_usage_two_days_task.set_upstream(start_time_task)
