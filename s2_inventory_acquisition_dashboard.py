@@ -111,8 +111,8 @@ and count > 0
 
 loot_cross as 
 (
-select category, rarity, productionlevel, 
-is_collectible, coalesce(b.pool_size, a.pool_size,0) as pool_size  
+select a.category, a.rarity, a.productionlevel, 
+a.is_collectible, coalesce(b.pool_size, a.pool_size,0) as pool_size  
 from 
 (
 select category, rarity, productionlevel, is_collectible 
