@@ -224,7 +224,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_awardproduct_data_userdatachanges_inventoryitems 
 where dt >= date '{{DS_DATE_ADD(-2)}}'
-and item_id_l in (1,2,5,6) 
+and item_id_l in (1,2,5,6,75) 
   
 union all
   
@@ -238,7 +238,7 @@ on a.context_headers_user_id_s = b.context_headers_user_id_s
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
 where a.dt >= date '{{DS_DATE_ADD(-2)}}'
-and a.item_id_l in (1,2,5,6) 
+and a.item_id_l in (1,2,5,6,75) 
 
 union all 
 
@@ -247,7 +247,7 @@ select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date '{{DS_DATE_ADD(-2)}}'
-and item_id_l in (1,2,5,6) 
+and item_id_l in (1,2,5,6,75) 
 
 ) 
   
@@ -258,7 +258,8 @@ and item_id_l in (1,2,5,6)
 select case when item_id_l = 1 then 'MP Common Crate' 
                 when item_id_l = 2 then 'MP Rare Crate' 
 				when item_id_l = 5 then 'ZM Common Crate' 
-				when item_id_l = 6 then 'ZM Rare Crate' end as crate_type
+				when item_id_l = 6 then 'ZM Rare Crate' 
+				when item_id_l = 75 then 'SD Winter' end as crate_type
 	, case when event_info_reason_s like '%%daily_ch%%' then 'Daily Challenge' 
 	       when event_info_reason_s like '%%weekly_ch%%' then 'Weekly Chalenge' 
 		   when event_info_reason_s like '%%contract%%' then 'Contracts' 
