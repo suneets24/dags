@@ -121,7 +121,7 @@ join ads_ww2.fact_mkt_consumeawards_data b
 on a.context_headers_user_id_s = b.context_headers_user_id_s 
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
-where a.dt >= '{{DS_DATE_ADD(-2)}}'
+where a.dt >= date '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 
 union all 
@@ -141,7 +141,7 @@ select distinct a.context_headers_title_id_s
 ,'Purchase Skus' as event_info_reason_s 
 ,a.dt
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_currencybalances  a 
-where dt >= '{{DS_DATE_ADD(-2)}}'
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 ) a join 
 
@@ -149,7 +149,7 @@ and currency_id_l = 6
 
 (
 select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
-where dt >= '{{DS_DATE_ADD(-2)}}'
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 ) c 
 on a.dt = c.dt 
 and a.context_headers_title_id_s = c.context_headers_title_id_s 
@@ -200,7 +200,7 @@ select dt, sum(unique_users) as unique_users
 from 
 ( select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
 from ads_ww2.fact_session_data 
-where dt >= '{{DS_DATE_ADD(-2)}}'
+where dt >= date '{{DS_DATE_ADD(-2)}}'
 group by 1,2 )
 group by 1 
 ) b 
