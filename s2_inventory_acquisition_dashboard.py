@@ -190,7 +190,7 @@ group by 1,2,3,4) y
 on x.category = y.category 
 and x.rarity = y.rarity 
 and x.is_collectible = y.is_collectible
-
+and x.productionlevel = y.productionlevel
 join 
     (select dt, sum(unique_users) as unique_users 
 	from 
