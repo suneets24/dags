@@ -71,70 +71,63 @@ insert_daily_inventory_acquisition_sql = '''Insert overwrite table as_shared.s2_
 
 with loot_table as 
 (
-select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionrewardid = loot_id then 2
+select name, reference, description, rarity, 
+case when productionlevel in ('Gold', 'TU1') then 'Launch' else productionlevel end as productionlevel 
+, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionrewardid = loot_id then 2
     when collectionid > 0 then 1 else 0 end) as is_collectible
 from as_s2.loot_v4_ext a 
-where productionlevel in ('Gold', 'TU1') 
+where productionlevel in ('Gold', 'TU1', 'MTX1') 
 AND trim(isloot) <> ''
-and category in ('consumable', 'emote', 'grip', 'uniforms', 'weapon', 'playercard_title') 
+and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
 and reference not in ('playercard_social_3', 'playercard_zm_challenge_11', 'playercard_zm_challenge_01', 'playercard_social_4')
 group by 1,2,3,4,5,6,7,8,9,10,11
 ),
 
+simulation_loot_pool as 
+(
+select 
+  case when category like '%emote%' then 'emote' 
+       when category like '%grip%' then 'grip' 
+	   when category like '%uniform%' then 'uniforms' 
+	   when category like '%weapon%' then 'weapon' 
+	   when category like '%emblem%' then 'playercard_icon' 
+	   when category like '%card%' then 'playercard_title' 
+	   when category like '%helmet%' then 'helmet' end as category 
+     
+, case when rarity = 'common' then 0 
+       when rarity = 'rare' then 1 
+	   when rarity = 'legendary' then 2 
+	   when rarity = 'epic' then 3 
+	   when rarity = 'heroic' then 4 end as rarity 
+, case when release_day = 0 then 'Launch' 
+when release_day = 35 then 'MTX1' end as productionlevel 
+, case when category like '%nc%' then 0 else 1 end as is_collectible 
+, count as pool_size 
+from as_S2.s2_loot_pool_sim 
+where category not in ('currency' , 'consumable')
+and count > 0
+
+),
+
 loot_cross as 
 (
-select category, rarity, productionlevel, is_collectible 
-, case when category = 'emote' and rarity = 0 and is_collectible = 1 then 30 
-       when category = 'emote' and rarity = 1 and is_collectible = 1  then 16 
-	   when category = 'emote' and rarity = 2 and is_collectible = 1 then 4 
-	   when category = 'emote' and rarity = 3 and is_collectible = 1 then 1 
-	   
-	   when category = 'emote' and rarity = 1 and is_collectible = 0 then 3 
-	   when category = 'emote' and rarity = 2 and is_collectible = 0 then 5 
-	   when category = 'emote' and rarity = 3 and is_collectible = 0 then 6 
-	   when category = 'emote' and rarity = 4 and is_collectible = 0 then 1 
-	   
-	   when category = 'grip' and rarity = 0 and is_collectible = 1 then 30 
-       when category = 'grip' and rarity = 1 and is_collectible = 1  then 18 
-	   when category = 'grip' and rarity = 2 and is_collectible = 1 then 10 
-	   when category = 'grip' and rarity = 3 and is_collectible = 1 then 4 
-	   
-	   when category = 'grip' and rarity = 0 and is_collectible = 0 then 24 
-	   when category = 'grip' and rarity = 1 and is_collectible = 0 then 21
-	   when category = 'grip' and rarity = 2 and is_collectible = 0 then 17 
-	   when category = 'grip' and rarity = 3 and is_collectible = 0 then 9 
-	   when category = 'grip' and rarity = 4 and is_collectible = 0 then 1 
-	   
-	   when category = 'uniforms' and rarity = 2 and is_collectible = 1 then 15 
-	   when category = 'uniforms' and rarity = 3 and is_collectible = 1 then 20 
-	   
-	   when category = 'uniforms' and rarity = 3 and is_collectible = 0 then 44 
-	   when category = 'uniforms' and rarity = 4 and is_collectible = 0 then 30  
-	   
-	   when category = 'weapon' and rarity = 3 and is_collectible = 0 then 57 
-	   when category = 'weapon' and rarity = 4 and is_collectible = 0 then 54 
-	   	   
-	   when category = 'playercard_title' and rarity = 0 and is_collectible = 1 then 29 
-	   when category = 'playercard_title' and rarity = 1 and is_collectible = 1 then 22 
-	   when category = 'playercard_title' and rarity = 2 and is_collectible = 1 then 19 
-	   when category = 'playercard_title' and rarity = 3 and is_collectible = 1 then 4 
-	   
-	   when category = 'playercard_title' and rarity = 0 and is_collectible = 0 then 26 
-	   when category = 'playercard_title' and rarity = 1 and is_collectible = 0 then 18
-	   when category = 'playercard_title' and rarity = 2 and is_collectible = 0 then 8 
-	   when category = 'playercard_title' and rarity = 3 and is_collectible = 0 then 10 
-       when category = 'playercard_title' and rarity = 4 and is_collectible = 0 then 1 
-	   else pool_size end as pool_size 
+select category, rarity, productionlevel, 
+is_collectible, coalesce(b.pool_size, a.pool_size,0) as pool_size  
 from 
-	   
 (
 select category, rarity, productionlevel, is_collectible 
 --, condition 
 , count(distinct loot_id) as pool_size
 from loot_table 
 group by 1,2,3,4
-) 
-),
+) a 
+left join simulation_loot_pool b 
+on a.category = b.category 
+and a.rarity = b.rarity 
+and a.productionlevel = b.productionlevel 
+and a.is_collectible = b.is_collectible 
+)
+,
 
 temp_inventory_data as 
 (
