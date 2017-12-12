@@ -120,7 +120,7 @@ with player_cohorts as
 temp_currecny_balances as 
 
 (
-select a.* , b.player_type 
+select a.* , c.player_type 
 from 
 (
 -- Creating a Union of three source of Currrency Balance changes, currency Balance View can be used but ignnored since it does not have event info reasons 
@@ -195,7 +195,7 @@ and a.context_headers_title_id_s = c.context_headers_title_id_s
 and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 ) 
 
-select player_type, currency_id, event_info_reason_s, sum(currency_gained)*pow(b.unique_users,-1) as currency_gained, sum(currency_spent)*pow(b.unique_users,-1) as currency_spent, b.unique_users , a.dt 
+select a.player_type, currency_id, event_info_reason_s, sum(currency_gained)*pow(b.unique_users,-1) as currency_gained, sum(currency_spent)*pow(b.unique_users,-1) as currency_spent, b.unique_users , a.dt 
 from 
 
 -- Adding a Mapping for all the currrency ids
@@ -238,7 +238,7 @@ group by 1,2,3,4,5
 select dt, player_type, sum(unique_users) as unique_users 
 from 
 ( select dt, player_type, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
-player_cohorts
+from player_cohorts
 group by 1,2,3 )
 group by 1,2 
 ) b 
