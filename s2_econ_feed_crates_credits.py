@@ -75,10 +75,52 @@ def export_to_rdms_operator(task_id, table_name, retries, retry_delay, dag):
         dag=dag)
 
 insert_armory_credits_gain_sql = """Insert overwrite table as_s2.s2_armory_credits_gain_source 
-with temp_currecny_balances as 
+
+with player_cohorts as	
+(
+	SELECT DISTINCT a.context_headers_title_id_s, a.network_id 
+	, a.client_user_id_l 
+	, coalesce(b.player_type, 'Active Non-Spender') as player_type 
+	, a.dt 
+	FROM ads_ww2.fact_session_data a 
+	left JOIN 
+	( SELECT network_id, context_headers_user_id_s,g_rev 
+	, case when player_ntile <= 1 then 'Active Superwhale' 
+			when player_ntile <= 20 then 'Active Whale' 
+			when player_ntile <= 50 then 'Active Dolphin' 
+			else 'Active Minnow' end as player_type 
+
+	FROM 
+	(
+		SELECT a.network_id, a.context_headers_user_id_s, g_rev, ntile(100) over (order by g_rev desc) as player_ntile 
+		FROM 
+			( SELECT context_headers_user_id_s 
+			, network_id 
+			, SUM(price_usd) as g_rev 
+			FROM  as_s2.ww2_mtx_consumables_staging 
+			WHERE dt <= date '{{DS_DATE_ADD(0)}}'
+			GROUP BY 1,2 
+			) a 
+		JOIN 
+		   (SELECT DISTINCT network_id, client_user_id_l 
+			FROM ads_ww2.fact_session_data 
+			WHERE dt between date '{{DS_DATE_ADD(-6)}}' AND date '{{DS_DATE_ADD(0)}}'
+			    ) b 
+		ON a.network_id = b.network_id 
+		AND a.context_headers_user_id_s = cast(b.client_user_id_l as varchar)
+		
+		) 
+	) b 
+	ON a.network_id = b.network_id 
+	AND cast(a.client_user_id_l as VARCHAR) = b.context_headers_user_id_s 
+	WHERE a.dt = date('2017-12-10')
+),
+
+
+temp_currecny_balances as 
 
 (
-select a.* 
+select a.* , b.player_type 
 from 
 (
 -- Creating a Union of three source of Currrency Balance changes, currency Balance View can be used but ignnored since it does not have event info reasons 
@@ -97,7 +139,7 @@ select distinct context_headers_title_id_s
 , 'Pawn Items' as event_info_reason_s 
 , dt 
 from ads_ww2.fact_mkt_pawnitems_data_userdatachanges_currencybalances 
-where dt >= date '{{DS_DATE_ADD(-2)}}'
+where dt = date '{{DS_DATE_ADD(0)}}'
 and currency_id_l = 6
 
 union all 
@@ -121,7 +163,7 @@ join ads_ww2.fact_mkt_consumeawards_data b
 on a.context_headers_user_id_s = b.context_headers_user_id_s 
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
-where a.dt >= date '{{DS_DATE_ADD(-2)}}'
+where a.dt = date '{{DS_DATE_ADD(0)}}'
 and currency_id_l = 6
 
 union all 
@@ -141,27 +183,24 @@ select distinct a.context_headers_title_id_s
 ,'Purchase Skus' as event_info_reason_s 
 ,a.dt
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_currencybalances  a 
-where dt >= date '{{DS_DATE_ADD(-2)}}'
+where dt = date '{{DS_DATE_ADD(0)}}'
 and currency_id_l = 6
 ) a join 
 
--- Considering only the users who had played at least one public match 
+-- Consider only the users who have login on that day 
 
-(
-select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
-where dt >= date '{{DS_DATE_ADD(-2)}}'
-) c 
+player_cohorts c 
 on a.dt = c.dt 
 and a.context_headers_title_id_s = c.context_headers_title_id_s 
 and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 ) 
 
-select currency_id, event_info_reason_s, sum(currency_gained)*pow(b.unique_users,-1) as currency_gained, sum(currency_spent)*pow(b.unique_users,-1) as currency_spent, b.unique_users , a.dt 
+select player_type, currency_id, event_info_reason_s, sum(currency_gained)*pow(b.unique_users,-1) as currency_gained, sum(currency_spent)*pow(b.unique_users,-1) as currency_spent, b.unique_users , a.dt 
 from 
 
 -- Adding a Mapping for all the currrency ids
 
-(select dt, context_headers_user_id_s, case when currency_id_l = 1 then 'XP' 
+(select dt, context_headers_user_id_s, player_type, case when currency_id_l = 1 then 'XP' 
                  when currency_id_l = 2 then 'COD Points'
 				 when currency_id_l = 3 then 'Clan Token'
 				 when currency_id_l = 4 then 'Prestige Token'
@@ -173,19 +212,19 @@ from
 				 when currency_id_l = 10 then 'Double Weapon XP'
 				 when currency_id_l = 11 then 'Double Loot'
 				 when currency_id_l = 12 then 'Double XP Daily Time' end as currency_id 
-, case when event_info_reason_s like '%%daily_ch%%' then 'Daily Chalange' 
-       when event_info_reason_s like '%%social_rank%%' then 'Social Rank Progress' 
-	   when event_info_reason_s like '%%payroll_officer%%' then 'Payroll Officer' 
+, case when event_info_reason_s like '%daily_ch%' then 'Daily Chalange' 
+       when event_info_reason_s like '%social_rank%' then 'Social Rank Progress' 
+	   when event_info_reason_s like '%payroll_officer%' then 'Payroll Officer' 
 	   
 	   -- Confirmed from my data that Supply Drop essentially Daily login as daily logins are result of opening of supply drops by the ID 65,68,69 etc
 	   
-	   when event_info_reason_s like '%%Supply Drop%%' then 'Daily Login' 
-	   when event_info_reason_s like '%%watch_sd%%' then 'Watch Supply Drop' 
+	   when event_info_reason_s like '%Supply Drop%' then 'Daily Login' 
+	   when event_info_reason_s like '%watch_sd%' then 'Watch Supply Drop' 
 	   else event_info_reason_s end as event_info_reason_s
 			 
 	, sum(currency_gained) as currency_gained, sum(currency_spent) as currency_spent 
 from 
-(select dt, context_headers_user_id_s, currency_id_l, event_info_reason_s, balance_new_l , balance_old_l, context_headers__event_type_s
+(select dt, player_type, context_headers_user_id_s, currency_id_l, event_info_reason_s, balance_new_l , balance_old_l, context_headers__event_type_s
 , context_headers_timestamp_s 
 , to_unixtime(from_iso8601_timestamp(context_headers_timestamp_s))
 , (case when balance_new_l > balance_old_l then (balance_new_l - balance_old_l )  else 0 end) as currency_gained 
@@ -193,20 +232,19 @@ from
 from temp_currecny_balances
 ) 
 
-group by 1,2,3,4
+group by 1,2,3,4,5
 ) a join 
 ( 
-select dt, sum(unique_users) as unique_users 
+select dt, player_type, sum(unique_users) as unique_users 
 from 
-( select dt, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
-from ads_ww2.fact_session_data 
-where dt >= date '{{DS_DATE_ADD(-2)}}'
-group by 1,2 )
-group by 1 
+( select dt, player_type, context_headers_title_id_s, count(distinct client_user_id_l) as unique_users 
+player_cohorts
+group by 1,2,3 )
+group by 1,2 
 ) b 
 on a.dt = b.dt 
-group by 1,2,5,6
-order by 1,2,3 """
+and a.player_type = b.player_type 
+group by 1,2,3,6,7 """
 
 ## Create a task for Armory credits Gain SQL
 
@@ -235,24 +273,19 @@ select distinct a.dt, a.context_data_mmp_transaction_id_s, a.context_headers_tit
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_inventoryitems a 
 left join ads_ww2.fact_mkt_consumeawards_data b 
-
 on a.context_headers_user_id_s = b.context_headers_user_id_s 
 and a.context_data_mmp_transaction_id_s = b.context_data_mmp_transaction_id_s 
 and b.client_transaction_id_s = a.context_data_client_transaction_id_s 
 where a.dt >= date '{{DS_DATE_ADD(-2)}}'
 and a.item_id_l in (1,2,5,6,75) 
-
 union all 
-
 select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Purchase Skus' as event_info_reason_s 
   ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
 ,case when quantity_new_l is null then 0 else quantity_new_l end quantity_new_l
 from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems 
 where dt >= date '{{DS_DATE_ADD(-2)}}'
 and item_id_l in (1,2,5,6,75) 
-
 ) a join 
-
 (
 select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
 where dt >= date '{{DS_DATE_ADD(-2)}}'
@@ -261,10 +294,8 @@ on a.dt = c.dt
 and a.context_headers_title_id_s = c.context_headers_title_id_s 
 and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
  ) 
-
 -- Marking the Crate Types
 -- Grouping Event Reasons based on the character sequences present in the event reason info 
-
 select case when item_id_l = 1 then 'MP Common Crate' 
                 when item_id_l = 2 then 'MP Rare Crate' 
 				when item_id_l = 5 then 'ZM Common Crate' 
@@ -303,6 +334,7 @@ group by 1
 on a.dt = b.dt 
 where a.quantity_new_l > a.quantity_old_l
 group by 1,2,3, 6,7''' 
+ 
 
 insert_crates_gain_task = qubole_operator('insert_crates_gain',
                                               insert_crates_gain_sql, 2, timedelta(seconds=600), dag)
