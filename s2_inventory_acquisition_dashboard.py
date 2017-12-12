@@ -78,7 +78,7 @@ case when productionlevel in ('Gold', 'TU1') then 'Launch' else productionlevel 
 , category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionrewardid = loot_id then 2
     when collectionid > 0 then 1 else 0 end) as is_collectible
 FROM as_s2.loot_v4_ext a 
-join as_s2.s2_items_from_crates b 
+left join as_s2.s2_items_from_crates b 
 on a.loot_id = b.item_id_l 
 WHERE productionlevel in ('Gold', 'TU1', 'MTX1') 
 AND trim(isloot) <> ''
