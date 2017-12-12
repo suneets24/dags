@@ -84,7 +84,7 @@ WHERE productionlevel in ('Gold', 'TU1', 'MTX1')
 AND trim(isloot) <> ''
 and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
 --and reference not in ('playercard_social_3', 'playercard_zm_challenge_11', 'playercard_zm_challenge_01', 'playercard_social_4')
-and (b.item_id_l is not null or collectionrewardid = loot_id)
+--and (b.item_id_l is not null or collectionrewardid = loot_id)
 GROUP by 1,2,3,4,5,6,7,8,9,10,11
 ),
 
