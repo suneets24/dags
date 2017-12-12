@@ -145,7 +145,7 @@ where dt >= date '{{DS_DATE_ADD(-2)}}'
 and currency_id_l = 6
 ) a join 
 
--- Considering only the isers who had played at least one public match 
+-- Considering only the users who had played at least one public match 
 
 (
 select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
@@ -218,6 +218,8 @@ insert_armory_credits_gain_task = qubole_operator('insert_armory_credits_gain',
 insert_crates_gain_sql = '''Insert overwrite table as_s2.s2_common_rare_crates_gain_source  
 with temp_inventory_items as 
 (
+select a.* from 
+(
   
 select distinct dt, context_data_mmp_transaction_id_s, context_headers_title_id_s, context_headers_user_id_s, item_id_l, 'Award Product' as event_info_reason_s 
   ,case when quantity_old_l is null then 0 else quantity_old_l end quantity_old_l
@@ -249,8 +251,16 @@ from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems
 where dt >= date '{{DS_DATE_ADD(-2)}}'
 and item_id_l in (1,2,5,6,75) 
 
-) 
-  
+) a join 
+
+(
+select distinct dt, context_headers_title_id_s, client_user_id_l from ads_ww2.fact_session_data
+where dt >= date '{{DS_DATE_ADD(-2)}}'
+) c 
+on a.dt = c.dt 
+and a.context_headers_title_id_s = c.context_headers_title_id_s 
+and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
+ ) 
 
 -- Marking the Crate Types
 -- Grouping Event Reasons based on the character sequences present in the event reason info 
