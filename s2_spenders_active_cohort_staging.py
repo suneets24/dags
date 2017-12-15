@@ -51,7 +51,7 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         templates_dict={'ds': '{{ ds }}'},
         dag=dag)
 
-insert_active_cohorts_sql = '''Insert into as_s2.s2_spenders_active_cohort_staging 
+insert_active_cohorts_sql = '''Insert overwrite as_s2.s2_spenders_active_cohort_staging 
 with player_cohorts as	
 (
 	SELECT DISTINCT a.context_headers_title_id_s 
@@ -94,7 +94,7 @@ with player_cohorts as
 	WHERE a.dt = date '{{DS_DATE_ADD(0)}}'
 ) 
 
-select * from as_s2.s2_spenders_active_cohort_staging'''
+select * from player_cohorts'''
 insert_active_cohorts_task = qubole_operator('s2_spenders_active_cohort_staging',
                                               insert_active_cohorts_sql, 4, timedelta(seconds=300), dag) 
 
