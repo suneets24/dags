@@ -176,12 +176,12 @@ player_mp AS
   from (select a.*, b.context_data_players_client_user_id_l, b.disconnect_reason_s
 		from war_tab a join first_round_players b 
 		on a.allies_match = b.context_data_match_common_matchid_s 
-		where b.disconnect_reason_s = 'EXE_DISCONNECTED'
+		where b.disconnect_reason_s like 'EXE_DISCONNECTED%'
 		union all 
 		select c.*, d.context_data_players_client_user_id_l, d.disconnect_reason_s
 		from war_tab c join second_round_players d 
 		on c.axis_match = d.context_data_match_common_matchid_s 
-		where d.disconnect_reason_s in ('EXE_DISCONNECTED', 'EXE_MATCHENDED')
+		where (d.disconnect_reason_s like 'EXE_DISCONNECTED%' or d.disconnect_reason_s in ('EXE_MATCHENDED'))
 		) e 
 ),
 
@@ -224,8 +224,8 @@ select dt as raw_date
 	end as map_name 
 
  	,matchduration/60.0 as duration_total -- Get Match Duration 
-	,count(distinct case when disconnect_reason_s = 'EXE_DISCONNECTED' then context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
-	,count(distinct case when disconnect_reason_s in ('EXE_MATCHENDED','EXE_DISCONNECTED')  then context_data_players_client_user_id_l end) as all_quits 
+	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%' then context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
+	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%' or disconnect_reason_s in ('EXE_MATCHENDED')  then context_data_players_client_user_id_l end) as all_quits 
 	, count(distinct context_data_players_client_user_id_l) as users 
 	from player_mp 
 	group by 1,2,3,4,5,6,7
@@ -428,8 +428,8 @@ Select d.monday_date
 
  	,matchduration/60.0 as duration_total -- Get Match Duration 
 	,sum(lives_count) as lives_count -- Total number of Spawns in the game 
-	,count(distinct case when disconnect_reason_s = 'EXE_DISCONNECTED' then a.context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
-	,count(distinct case when disconnect_reason_s in ('EXE_MATCHENDED','EXE_DISCONNECTED')  then a.context_data_players_client_user_id_l end) as all_quits -- Voluntary Quits + Match Ended -- SV_MatchEnd, EXE_MATCHENDED
+	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%' then a.context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
+	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%' or when disconnect_reason_s in ('EXE_MATCHENDED')  then a.context_data_players_client_user_id_l end) as all_quits -- Voluntary Quits + Match Ended -- SV_MatchEnd, EXE_MATCHENDED
 	,sum(kills) as kills 
 	,sum(deaths) as deaths
     ,count(distinct a.context_data_players_client_user_id_l) as users 
