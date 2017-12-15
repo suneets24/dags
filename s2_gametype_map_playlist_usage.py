@@ -429,7 +429,7 @@ Select d.monday_date
  	,matchduration/60.0 as duration_total -- Get Match Duration 
 	,sum(lives_count) as lives_count -- Total number of Spawns in the game 
 	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%%' then a.context_data_players_client_user_id_l end) as early_quits -- Voluntary Quits 
-	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%%' or when disconnect_reason_s in ('EXE_MATCHENDED')  then a.context_data_players_client_user_id_l end) as all_quits -- Voluntary Quits + Match Ended -- SV_MatchEnd, EXE_MATCHENDED
+	,count(distinct case when disconnect_reason_s like 'EXE_DISCONNECTED%%' or disconnect_reason_s in ('EXE_MATCHENDED')  then a.context_data_players_client_user_id_l end) as all_quits -- Voluntary Quits + Match Ended -- SV_MatchEnd, EXE_MATCHENDED
 	,sum(kills) as kills 
 	,sum(deaths) as deaths
     ,count(distinct a.context_data_players_client_user_id_l) as users 
