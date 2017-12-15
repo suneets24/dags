@@ -528,7 +528,7 @@ and a.map_name = c.map_name"""
 insert_daily_gametype_map_playlist_usage_two_days_task = qubole_operator('daily_gametype_maps_playlist_usage_two_days',
                                               evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, -1,5), 2, timedelta(seconds=600), dag) 
 insert_daily_gametype_map_playlist_usage_one_days_task = qubole_operator('daily_gametype_maps_playlist_usage_one_days',
-##                                             evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, 0,5), 2, timedelta(seconds=600), dag) 
+                                             evaluate_queries(insert_daily_gametype_maps_playlist_usage_sql, 0,5), 2, timedelta(seconds=600), dag) 
 
 # Wire up the DAG , Setting Dependency of the tasks
 insert_daily_gametype_map_playlist_usage_two_days_task.set_upstream(start_time_task)
