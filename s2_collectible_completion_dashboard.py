@@ -16,7 +16,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 11, 03),
+    'start_date': datetime(2017, 12, 15),
     'schedule_interval': '@daily'
 }
 
@@ -192,5 +192,5 @@ insert_collectible_completion_task = qubole_operator('s2_collectible_completion_
                                               insert_collectible_completion_sql, 2, timedelta(seconds=600), dag) 
 
 # Wire up the DAG , Setting Dependency of the tasks
-player_cohort_dependency_task,set_upstream(start_time_task)
+player_cohort_dependency_task.set_upstream(start_time_task)
 insert_collectible_completion_task.set_upstream(player_cohort_dependency_task)
