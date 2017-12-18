@@ -32,6 +32,7 @@ start_time_task = TimeSensor(target_time=time(7, 00),
 
 player_cohort_dependency_task = ExternalTaskSensor(external_dag_id='s2_spenders_active_cohort_staging',
                                                    external_task_id='insert_active_cohorts_task',
+												   task_id='wait_for_player_cohort',
 												   dag=dag) 
 
 current_date = (datetime.now()).date()
@@ -191,4 +192,5 @@ insert_collectible_completion_task = qubole_operator('s2_collectible_completion_
                                               insert_collectible_completion_sql, 2, timedelta(seconds=600), dag) 
 
 # Wire up the DAG , Setting Dependency of the tasks
+player_cohort_dependency_task,set_upstream(start_time_task)
 insert_collectible_completion_task.set_upstream(player_cohort_dependency_task)
