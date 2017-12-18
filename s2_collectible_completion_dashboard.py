@@ -20,7 +20,7 @@ default_args = {
     'schedule_interval': '@daily'
 }
 
-dag = airflow.DAG(dag_id='s2_collectible_completion_dashboard',
+dag = airflow.DAG(dag_id='s2_collectible_completion_dashboard_cohort',
                   default_args=default_args
                   )
 
