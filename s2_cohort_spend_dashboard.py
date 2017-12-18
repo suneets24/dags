@@ -90,7 +90,7 @@ select  player_type,avg(g_rev) as revenue_generated, date '{{DS_DATE_ADD(0)}}' a
 from player_cohorts
 group by 1,3""" 
 
-insert_cohort_spend_task = qubole_operator('s2_cohortspenddashboard',
+insert_cohort_spend_task = qubole_operator('s2_cohort_spend_task',
                                               insert_cohort_spend_sql, 2, timedelta(seconds=600), dag) 
 
 # Wire up the DAG , Setting Dependency of the tasks
