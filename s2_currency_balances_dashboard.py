@@ -75,14 +75,13 @@ and currency_id_l = 6
 
 join ads_ww2.fact_session_data c 
 on a.context_headers_title_id_s = c.context_headers_title_id_s 
-and a.context_headers_user_id_s = c.client_user_id_l 
+and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
 
-left join as_s2.s2_spenders_active_cohort_staging b 
+left join (select * from as_s2.s2_spenders_active_cohort_staging where raw_date = date '{{DS_DATE_ADD(0)}}' ) b 
 on a.context_headers_title_id_s = b.title_id_s 
 and a.context_headers_user_id_s = cast(b.client_user_id as varchar) 
 -- Filter on Session Data and Spending cohort data
 where c.dt = date '{{DS_DATE_ADD(0)}}'
-and b.raw_date = date '{{DS_DATE_ADD(0)}}'
 )
 
 
