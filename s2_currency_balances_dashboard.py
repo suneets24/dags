@@ -23,14 +23,13 @@ dag = airflow.DAG(dag_id='s2_currency_balance_dashboard',
                   default_args=default_args
                   )
 
+
+				  
 # Start running at this time
 start_time_task = TimeSensor(target_time=time(6, 30),
                              task_id='start_time_task',
                              dag=dag
                              )
-
-current_date = (datetime.now()).date()
-stats_date = current_date - timedelta(days=1)
 
 def qubole_operator(task_id, sql, retries, retry_delay, dag):
     return PythonOperator(
@@ -51,11 +50,14 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         dag=dag)
 
 		
-insert_currency_balance_sql = """Insert overwrite table as_shared.s2_currency_balances 
-with temp_currecny_balances as 
+insert_currency_balance_sql = """Insert overwrite as_s2.s2_currency_balances_dashboard 
+with temp_currecny_balance as 
+(
+select a.*, coalesce(b.player_type, 'Active Non-Spender') as player_type  
+from 
 (
 select distinct context_headers_title_id_s
-, context_data_mmp_transaction_id_s
+  , context_data_mmp_transaction_id_s
 ,context_headers_source_s
 ,context_headers_env_s
 ,context_headers_uuid_s
@@ -66,50 +68,36 @@ select distinct context_headers_title_id_s
 ,balance_new_l
 ,balance_old_l 
 ,dt
-from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_currencybalances 
+from ads_ww2.fact_currency_balances_view 
 where dt <= date '{{DS_DATE_ADD(0)}}'
+and currency_id_l = 6 
+) a 
+
+join ads_ww2.fact_session_data c 
+on a.context_headers_title_id_s = c.context_headers_title_id_s 
+and a.context_headers_user_id_s = c.client_user_id_l 
+
+left join as_s2.s2_spenders_active_cohort_staging b 
+on a.context_headers_title_id_s = b.title_id_s 
+and a.context_headers_user_id_s = cast(b.client_user_id as varchar) 
+-- Filter on Session Data and Spending cohort data
+where c.dt = date '{{DS_DATE_ADD(0)}}'
+and b.raw_date = date '{{DS_DATE_ADD(0)}}'
+)
 
 
-union all 
+-- Get currency balance for DAUs on that day 
 
-select distinct context_headers_title_id_s
-, context_data_mmp_transaction_id_s
-,context_headers_source_s
-,context_headers_env_s
-,context_headers_uuid_s
-,context_headers__event_type_s
-,context_headers_user_id_s
-,context_headers_timestamp_s
-,currency_id_l
-,balance_new_l
-,balance_old_l
-, dt 
-from ads_ww2.fact_mkt_pawnitems_data_userdatachanges_currencybalances 
-where dt <= date '{{DS_DATE_ADD(0)}}'
-
-union all 
-
-select distinct context_headers_title_id_s
-, context_data_mmp_transaction_id_s
-,context_headers_source_s
-,context_headers_env_s
-,context_headers_uuid_s
-,context_headers__event_type_s
-,context_headers_user_id_s
-,context_headers_timestamp_s
-,currency_id_l
-,balance_new_l
-,balance_old_l 
-, dt
-from ads_ww2.fact_mkt_consumeawards_data_userdatachanges_currencybalances  
-where dt <= date '{{DS_DATE_ADD(0)}}'
-) 
-
-
-select currency_id, avg(currency_balance) as currency_balance, date '{{DS_DATE_ADD(0)}}' as dt
+select player_type, currency_id, avg(new_balance) as balance 
+, count(distinct row(context_headers_title_id_s, context_headers_user_id_s)) as num_users 
+,  date '{{DS_DATE_ADD(0)}}' as raw_date
 from 
 (
-select context_headers_title_id_s, context_headers_user_id_s, case when currency_id_l = 1 then 'XP' 
+select player_type, context_headers_user_id_s, context_headers_title_id_s 
+
+-- Only considered Armory Credits, Same can be expanded to get balance for all other currenceis 
+
+, case when currency_id_l = 1 then 'XP' 
                  when currency_id_l = 2 then 'COD Points'
 				 when currency_id_l = 3 then 'Clan Token'
 				 when currency_id_l = 4 then 'Prestige Token'
@@ -122,34 +110,24 @@ select context_headers_title_id_s, context_headers_user_id_s, case when currency
 				 when currency_id_l = 11 then 'Double Loot'
 				 when currency_id_l = 12 then 'Double XP Daily Time' end as currency_id 
 			 
-	, sum(currency_change_per_day ) as currency_balance 
-	from 
-
-(
-select dt, context_headers_title_id_s, context_headers_user_id_s, currency_id_l, sum(currency_gained)-sum(currency_spent) as currency_change_per_day 
+	, balance_new_l as new_balance 
+	, row_number() over (partition by context_headers_title_id_s, context_headers_user_id_s, currency_id_l order by ts desc) as transact_rank
 from 
 (
-select dt, a.context_headers_title_id_s, a.context_headers_user_id_s, currency_id_l, balance_new_l , balance_old_l, context_headers__event_type_s
-, context_headers_timestamp_s 
-, to_unixtime(from_iso8601_timestamp(context_headers_timestamp_s))
-, (case when balance_new_l > balance_old_l then (balance_new_l - balance_old_l )  else 0 end) as currency_gained 
-, (case when balance_new_l < balance_old_l then (balance_old_l - balance_new_l )  else 0 end) as currency_spent 
-from temp_currecny_balances a join 
-(
-select distinct context_headers_title_id_s, client_user_id_l from 
-ads_ww2.fact_session_data
-where dt = date '{{DS_DATE_ADD(0)}}'
-) c 
-on a.context_headers_title_id_s = c.context_headers_title_id_s 
-and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
-) 
-group by 1,2,3,4
+select distinct dt, player_type  
+, context_headers_title_id_s 
+, context_headers_user_id_s 
+, currency_id_l, balance_new_l , balance_old_l 
+, to_unixtime(from_iso8601_timestamp(context_headers_timestamp_s)) as ts 
+from temp_currecny_balance 
 )
-group by 1,2,3 
 )
-where currency_id = 'Armory Credit'  
-group by 1,3""" 
+-- Get latest transaction till that day 
+where transact_rank = 1 
+group by 1,2,5
+""" 
 
+#### Please let me know if the task name is fine
 insert_currency_balance_task = qubole_operator('daily_end_of_day_currency_balance',
                                               insert_currency_balance_sql, 2, timedelta(seconds=600), dag) 
 
