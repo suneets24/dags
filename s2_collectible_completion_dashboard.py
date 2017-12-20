@@ -30,11 +30,6 @@ start_time_task = TimeSensor(target_time=time(7, 00),
                              dag=dag
                              )
 
-player_cohort_dependency_task = ExternalTaskSensor(external_dag_id='s2_spenders_active_cohort_staging',
-                                                   external_task_id='insert_active_cohorts_task',
-												   task_id='wait_for_player_cohort',
-												   dag=dag) 
-
 current_date = (datetime.now()).date()
 stats_date = current_date - timedelta(days=1)
 
