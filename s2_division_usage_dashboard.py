@@ -101,7 +101,7 @@ select distinct b.context_headers_title_id_s
 ,b.context_data_players_prestige_i as player_prestige
 , b.dt 
 from 
-( select * from ads_ww2.fact_mp_match_data_lives where dt =  date '{{DS_DATE_ADD(0)}}' )a 
+( select * from ads_ww2.fact_mp_match_data_lives where dt =  date '{{DS_DATE_ADD(0)}}' and context_data_match_common_is_private_match_b = FALSE )a 
 join 
 (
     select distinct context_headers_title_id_s, context_data_match_common_matchid_s,context_data_players_client_user_id_l,context_data_players_prestige_i,context_data_players_start_rank_i,  
