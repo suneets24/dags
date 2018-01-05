@@ -641,7 +641,7 @@ player_match as
 (
 select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, 
 
-  round(start_mmr_current_f,0) as start_mmr_range
+  round(start_mmr_current_f,1) as start_mmr_range
 , start_prestige_i 
 from ads_ww2.fact_mp_match_data_players 
 where dt = date '{{DS_DATE_ADD(0)}}'
