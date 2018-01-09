@@ -53,18 +53,18 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         dag=dag)
 ## Spark Wrappper 
 
-def spark_operator(label, task_id, program, language, arguements, retries, retry_delay, dag):
+def spark_operator(label, task_id, program, language, arguments, retries, retry_delay, dag):
     return PythonOperator(
 	    task_id=task_id,
 		python_callable=spark_wrapper,
 		provide_context=True,
 		retries=retries,
 		retry_delay=retry_delay,
-		arguements=arguements,
+		arguments=arguments,
 		op_kwargs={'label': label,
 		           'program': program,
 				   'language': language,
-				   'arguements': arguements,
+				   'arguments': arguments,
 				   'expected_runtime':expected_runtime,
 				   'dag_id': dag.dag_id,
 				   'task_id': task_id
