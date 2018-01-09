@@ -69,7 +69,7 @@ def spark_operator(label, task_id, program, language, arguements, retries, retry
 				   'dag_id': dag.dag_id,
 				   'task_id': task_id
 		           },
-		templates_dict={'ds': '{{ ds }}',
+		templates_dict={'ds': '{{ ds }}'},
 		dag=dag)
 		
 insert_query_backfill_sql = """ Insert overwrite as_s2.s2_crates_balance_dashboard_cohort
