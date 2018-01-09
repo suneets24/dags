@@ -51,7 +51,26 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
                    },
         templates_dict={'ds': '{{ ds }}'},
         dag=dag)
+## Spark Wrappper 
 
+def spark_operator(label, task_id, program, language, arguements, retries, retry_delay, dag):
+    return PythonOperator(
+	    task_id=task_id,
+		python_callable=SparkWrapper,
+		provide_context=True,
+		retries=retries,
+		retry_delay=retry_delay,
+		arguements=arguements,
+		op_kwargs={'label': label,
+		           'program': program,
+				   'language': language,
+				   'arguements': arguements,
+				   'expected_runtime':expected_runtime,
+				   'dag_id': dag.dag_id,
+				   'task_id': task_id
+		           },
+		templates_dict={'ds': '{{ ds }}',
+		dag=dag)
 		
 insert_query_backfill_sql = """ Insert overwrite as_s2.s2_crates_balance_dashboard_cohort
 with player_cohorts as	
@@ -185,6 +204,21 @@ group by 1,2,5,6
 
 insert_query_backfill_task = qubole_operator('insert_query_backfill',
                                               insert_query_backfill_sql, 3, timedelta(seconds=600), dag) 
+test_script = '''from pyspark.sql import SparkSession
+spark = (SparkSession
+            .builder
+            .appName('Double XP')
+            .enableHiveSupport()
+            .getOrCreate()
+            )
+from pyspark.sql import HiveContext
+
+spark.conf.set("spark.sql.crossJoin.enabled", "true")
+spark.conf.set("hive.exec.dynamic.partition", "true")
+spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")'''
+
+test_spark_task = spark_operator('spark210', 'spark_test_script', test_script, 'PYTHON', '--conf spark.driver.extraJavaOptions=-Djava.net.preferIPv4Stack=true --conf spark.driver.extraLibraryPath=/usr/lib/hadoop2/lib/native --conf spark.eventLog.compress=true --conf spark.eventLog.enabled=true --conf spark.executor.cores=5 --conf spark.executor.extraJavaOptions=-Djava.net.preferIPv4Stack=true --conf spark.executor.instances=12 --conf spark.executor.memory=37g --conf spark.logConf=true --conf spark.scheduler.listenerbus.eventqueue.size=20000 --conf spark.speculation=false --conf spark.sql.qubole.split.computation=false --conf spark.ui.retainedJobs=33 --conf spark.ui.retainedStages=100 --conf spark.yarn.executor.memoryOverhead=2581 --conf spark.yarn.maxAppAttempts=1 --conf spark.dynamicAllocation.enabled=true --conf spark.master=yarn --conf spark.shuffle.service.enabled=true --conf spark.submit.deployMode=client', 2, timedelta(seconds=600), dag)
 
 # Wire up the DAG , Setting Dependency of the tasks
 insert_query_backfill_task.set_upstream(start_time_task)
+test_spark_task.set_upstream(start_time_task)
