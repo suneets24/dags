@@ -61,6 +61,7 @@ def spark_operator(label, task_id, program, language, arguments, retries, retry_
 		retries=retries,
 		retry_delay=retry_delay,
 		arguments=arguments,
+		pool='spark_default_pool',
 		op_kwargs={'label': label,
 		           'program': program,
 				   'language': language,
