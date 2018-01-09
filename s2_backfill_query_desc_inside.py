@@ -4,7 +4,7 @@ import airflow
 from datetime import timedelta, datetime, time
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
-from quboleWrapper import qubole_wrapper, export_to_rdms
+from quboleWrapper import qubole_wrapper, export_to_rdms, spark_wrapper
 
 query_type = 'dev_presto'
 
@@ -56,7 +56,7 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
 def spark_operator(label, task_id, program, language, arguements, retries, retry_delay, dag):
     return PythonOperator(
 	    task_id=task_id,
-		python_callable=SparkWrapper,
+		python_callable=spark_wrapper,
 		provide_context=True,
 		retries=retries,
 		retry_delay=retry_delay,
