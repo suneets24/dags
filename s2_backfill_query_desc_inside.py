@@ -4,7 +4,7 @@ import airflow
 from datetime import timedelta, datetime, time
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
-from quboleWrapper import qubole_wrapper, export_to_rdms
+from quboleWrapper import qubole_wrapper, export_to_rdms, spark_wrapper
 
 query_type = 'dev_presto'
 
@@ -53,23 +53,23 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         dag=dag)
 ## Spark Wrappper 
 
-def spark_operator(label, task_id, program, language, arguements, retries, retry_delay, dag):
+def spark_operator(label, task_id, program, language, arguments, retries, retry_delay, dag):
     return PythonOperator(
 	    task_id=task_id,
-		python_callable=SparkWrapper,
+		python_callable=spark_wrapper,
 		provide_context=True,
 		retries=retries,
 		retry_delay=retry_delay,
-		arguements=arguements,
+		arguments=arguments,
 		op_kwargs={'label': label,
 		           'program': program,
 				   'language': language,
-				   'arguements': arguements,
+				   'arguments': arguments,
 				   'expected_runtime':expected_runtime,
 				   'dag_id': dag.dag_id,
 				   'task_id': task_id
 		           },
-		templates_dict={'ds': '{{ ds }}',
+		templates_dict={'ds': '{{ ds }}'},
 		dag=dag)
 		
 insert_query_backfill_sql = """ Insert overwrite as_s2.s2_crates_balance_dashboard_cohort
