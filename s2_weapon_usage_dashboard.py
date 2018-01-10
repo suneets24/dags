@@ -655,7 +655,7 @@ where dt = date '{{DS_DATE_ADD(0)}}'
 and context_data_match_common_matchid_s in (SELECT context_data_match_common_matchid_s from temp_match)
 ),
 
-loot_table as 
+loot_TABLE as 
 (
 SELECT name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
 from as_s2.loot_v5_ext a 
@@ -720,7 +720,7 @@ SELECT DISTINCT a.context_headers_title_id_s as title_id
     join player_match c 
     on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s 
     and a.context_data_players_index = c.context_data_players_index 
-    join loot_table d 
+    join loot_TABLE d 
     on a.weapon_guid_l = d.loot_id 
     where a.dt = date '{{DS_DATE_ADD(0)}}'
     and a.time_in_use_seconds_i > 0 
@@ -817,7 +817,7 @@ join player_match c
 on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s
 and a.player_index_i = c.context_data_players_index
 
-left join loot_table d -- Weapon Description Mapping 
+left join loot_TABLE d -- Weapon Description Mapping 
 on a.victim_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
@@ -869,7 +869,7 @@ join player_match c
 on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s
 and a.attacker_i = c.context_data_players_index
 
-left join loot_table d -- Weapon Description Mapping TABLE 
+left join loot_TABLE d -- Weapon Description Mapping TABLE 
 on a.attacker_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
