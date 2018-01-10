@@ -93,8 +93,8 @@ and context_data_match_common_matchid_s in (select context_data_match_common_mat
 
 loot_table as 
 (
-select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
-from as_s2.loot_v4_ext a 
+select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
+from as_s2.loot_v5_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
 ),
@@ -369,8 +369,8 @@ and context_data_match_common_matchid_s in (select context_data_match_common_mat
 
 loot_table as 
 (
-select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
-from as_s2.loot_v4_ext a 
+select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
+from as_s2.loot_v5_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
 ),
@@ -650,8 +650,8 @@ and context_data_match_common_matchid_s in (select context_data_match_common_mat
 
 loot_table as 
 (
-select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base 
-from as_s2.loot_v4_ext a 
+select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
+from as_s2.loot_v5_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
 ),
