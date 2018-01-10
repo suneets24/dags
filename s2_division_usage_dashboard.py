@@ -2,7 +2,7 @@ import airflow
 from datetime import timedelta, datetime, time
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
-from quboleWrapper import qubole_wrapper, export_to_rdms
+from quboleWrapper import qubole_wrapper, export_to_rdms, spark_wrapper
 
 query_type = 'dev_presto'
 
