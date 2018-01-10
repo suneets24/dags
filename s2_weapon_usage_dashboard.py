@@ -621,11 +621,12 @@ on c.raw_date = d.raw_date
 insert_daily_weapons_usage_a_day_back_task = qubole_operator('insert_daily_weapons_usage_a_day_back',
                                               insert_daily_weapons_usage_a_day_back_sql, 2, timedelta(seconds=600), dag)
 
-insert_weapon_usage_ranked_play_start_mmr_sql = '''Insert overwrite table as_shared.s2_weapon_usage_dashboard_start_mmr_ranked_play
+insert_weapon_usage_ranked_play_start_mmr_sql = '''
+INSERT overwrite TABLE as_shared.s2_weapon_usage_dashboard_start_mmr_ranked_play
 
 with temp_match as 
 (   
-    select distinct context_headers_title_id_s, context_data_match_common_matchid_s, match_common_map_s, match_common_gametype_s, 
+    SELECT DISTINCT context_headers_title_id_s, context_data_match_common_matchid_s, match_common_map_s, match_common_gametype_s, 
 	context_headers_event_id_s, match_common_utc_start_time_i, match_common_life_count_i,
 	match_common_player_count_i, match_common_has_bots_b 
 	FROM ads_ww2.fact_mp_match_data
@@ -639,18 +640,24 @@ with temp_match as
 
 player_match as 
 (
-select distinct context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, 
+SELECT DISTINCT context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_index, client_gamer_tag_s, context_data_players_client_user_id_l, 
 
-  round(start_mmr_current_f,1) as start_mmr_range
+  CASE
+    WHEN end_mmr_current_f < -2.0 THEN 'Bronze'
+    WHEN end_mmr_current_f < 0.0 THEN 'Silver'
+    WHEN end_mmr_current_f < 2.0 THEN 'Gold'
+    WHEN end_mmr_current_f < 4.0 THEN 'Platinum'
+    WHEN end_mmr_current_f < 6.0 THEN 'Diamond'
+    ELSE 'Master' END AS mmr_tier
 , start_prestige_i 
 from ads_ww2.fact_mp_match_data_players 
 where dt = date '{{DS_DATE_ADD(0)}}'
-and context_data_match_common_matchid_s in (select context_data_match_common_matchid_s from temp_match)
+and context_data_match_common_matchid_s in (SELECT context_data_match_common_matchid_s from temp_match)
 ),
 
 loot_table as 
 (
-select name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
+SELECT name, reference, description, rarity, productionlevel, category, rarity_s, loot_id, loot_group , weapon_name as weapon_base 
 from as_s2.loot_v5_ext a 
 where upper(category) = 'WEAPON'
 group by 1,2,3,4,5,6,7,8,9,10
@@ -659,7 +666,7 @@ group by 1,2,3,4,5,6,7,8,9,10
 
 weapon_usage as 
  (
-  select dt as raw_date 
+  SELECT dt as raw_date 
 
  , case when title_id in ('5598') then 'XBOX'
 
@@ -667,13 +674,13 @@ weapon_usage as
 
 		when title_id in ('5597') then 'PC' end as platform
 
-		, regexp_replace(weapon_base, '_mp', '') as weapon_base
+		, weapon_base
 
 		, weapon_class 
 
 		, game_type
 
-		, start_mmr 
+		, mmr_tier 
 
 		, prestige 
 
@@ -690,7 +697,7 @@ weapon_usage as
 FROM  
 
  (
-select distinct a.context_headers_title_id_s as title_id
+SELECT DISTINCT a.context_headers_title_id_s as title_id
         , a.dt 
         , a.context_data_match_common_matchid_s as match_id
         , a.loadout_index_i as loadoutid 
@@ -700,7 +707,7 @@ select distinct a.context_headers_title_id_s as title_id
         , d.weapon_base 
         , b.match_common_gametype_s game_type 
         , c.client_gamer_tag_s as gamer_tag
-        , c.start_mmr_range as start_mmr
+        , c.mmr_tier as mmr_tier
         , c.start_prestige_i as prestige
         , a.kills_i as kills
         , a.deaths_i as deaths 
@@ -721,22 +728,22 @@ select distinct a.context_headers_title_id_s as title_id
 group by 1,2,3,4,5,6,7
 ),
 
-cross_table as 
+cross_TABLE as 
 (
-select * 
-FROM (select distinct start_mmr from weapon_usage) c1
-CROSS JOIN (select distinct game_type from weapon_usage) c2 
-CROSS JOIN (select distinct platform from weapon_usage) c3
-CROSS JOIN (SELECT distinct raw_date, weapon_base, weapon_class from weapon_usage) c4 
-CROSS JOIN (select distinct prestige from weapon_usage where prestige between 0 and 11) c5
+SELECT * 
+FROM (SELECT DISTINCT mmr_tier from weapon_usage) c1
+CROSS JOIN (SELECT DISTINCT game_type from weapon_usage) c2 
+CROSS JOIN (SELECT DISTINCT platform from weapon_usage) c3
+CROSS JOIN (SELECT DISTINCT raw_date, weapon_base, weapon_class from weapon_usage) c4 
+CROSS JOIN (SELECT DISTINCT prestige from weapon_usage where prestige between 0 and 11) c5
 )
 
-select d.monday_date as week_start_dt 
+SELECT d.monday_date as week_start_dt 
 , c.game_type 
 , c.platform 
-, regexp_replace(c.weapon_base , '_mp', '') as weapon_base
+, c.weapon_base
 , c.weapon_class 
-, c.start_mmr 
+, c.mmr_tier 
 , c.prestige 
 , coalesce(a.kills,0) as kills_equipped 
 , coalesce(a.deaths,0) as deaths_equipped 
@@ -746,23 +753,23 @@ select d.monday_date as week_start_dt
 , coalesce(b.deaths,0) as deaths_loadout 
 , coalesce(b.duration,0) as duration_loadout 
 , coalesce(b.times_used,0) as times_used_loadout 
-, sum(coalesce(a.kills,0)) over (partition by c.raw_date , c.game_type , c.platform , c.start_mmr, c.prestige) as kills_total_weapon_name
-, sum(coalesce(a.duration,0)) over (partition by c.raw_date , c.game_type , c.platform , c.start_mmr, c.prestige) as duration_total_weapon_name 
-, sum(coalesce(b.duration,0)) over (partition by c.raw_date , c.game_type , c.platform , c.start_mmr, c.prestige) as duration_loadout_total_weapon_name 
-, count(c.weapon_base) over (partition by c.raw_date , c.game_type , c.platform , c.start_mmr, c.prestige, c.weapon_class) as total_num_weapon_base 
+, sum(coalesce(a.kills,0)) over (partition by c.raw_date , c.game_type , c.platform , c.mmr_tier, c.prestige) as kills_total_weapon_name
+, sum(coalesce(a.duration,0)) over (partition by c.raw_date , c.game_type , c.platform , c.mmr_tier, c.prestige) as duration_total_weapon_name 
+, sum(coalesce(b.duration,0)) over (partition by c.raw_date , c.game_type , c.platform , c.mmr_tier, c.prestige) as duration_loadout_total_weapon_name 
+, count(c.weapon_base) over (partition by c.raw_date , c.game_type , c.platform , c.mmr_tier, c.prestige, c.weapon_class) as total_num_weapon_base 
 , c.raw_date 
-from cross_table c
+from cross_TABLE c
 join 
 
 (
-select raw_date 
+SELECT raw_date 
 , game_type 
 , case when title_id in ('5598') then 'XBOX' 
             when title_id in ('5599') then 'PS4' 
 			when title_id in ('5597') then 'PC' end as platform 
-, regexp_replace(weapon_base , '_mp', '') as weapon_base 
+, weapon_base 
 , weapon_class
-, start_mmr
+, mmr_tier
 , prestige
 , sum(kills) as kills 
 , sum(deaths) as deaths 
@@ -775,14 +782,14 @@ from
 
 (
 (
-select distinct b.context_headers_title_id_s as title_id 
+SELECT DISTINCT b.context_headers_title_id_s as title_id 
 , b.match_common_map_s as map_description 
 , b.match_common_gametype_s as game_type 
 , a.victim_weapon_s as weapon_name
 , a.attacker_weapon_s as attacker_weapon
 , d.loot_group as weapon_class 
 , d.weapon_base 
-, c.start_mmr_range as start_mmr 
+, c.mmr_tier as mmr_tier 
 , c.start_prestige_i as prestige 
 , c.client_gamer_tag_s as gamer_tag
 , a.context_headers_event_id_s 
@@ -827,14 +834,14 @@ union all
 
 
 ( 
-select distinct b.context_headers_title_id_s as title_id 
+SELECT DISTINCT b.context_headers_title_id_s as title_id 
 , b.match_common_map_s as map_description 
 , b.match_common_gametype_s as game_type 
 , a.attacker_weapon_s as weapon_name
 , a.victim_weapon_s as victim_weapon
 , d.loot_group as weapon_class 
 , d.weapon_base 
-, c.start_mmr_range as start_mmr 
+, c.mmr_tier as mmr_tier 
 , c.start_prestige_i as prestige 
 , c.client_gamer_tag_s as gamer_tag
 , a.context_headers_event_id_s 
@@ -862,7 +869,7 @@ join player_match c
 on a.context_data_match_common_matchid_s = c.context_data_match_common_matchid_s
 and a.attacker_i = c.context_data_players_index
 
-left join loot_table d -- Weapon Description Mapping Table 
+left join loot_table d -- Weapon Description Mapping TABLE 
 on a.attacker_weapon_guid_l = d.loot_id
 
 -- Lives Data Filters 
@@ -881,7 +888,7 @@ and c.game_type = a.game_type
 and c.platform = a.platform 
 and c.weapon_base = a.weapon_base 
 and c.weapon_class = a.weapon_class 
-and c.start_mmr = a.start_mmr 
+and c.mmr_tier = a.mmr_tier 
 and c.prestige = a.prestige 
 
 left join weapon_usage b 
@@ -891,12 +898,11 @@ and c.game_type = b.game_type
 and c.platform = b.platform 
 and c.weapon_base = b.weapon_base 
 and c.weapon_class = b.weapon_class 
-and c.start_mmr = b.start_mmr 
+and c.mmr_tier = b.mmr_tier 
 and c.prestige = b.prestige 
 
 left join as_shared.dim_date_id_date_monday_dev d 
-on c.raw_date = d.raw_date
---)'''
+on c.raw_date = d.raw_date '''
 
 insert_weapon_usage_ranked_play_mmr_task = qubole_operator('insert_daily_weapons_usage_ranked_play_mmr_task',
                                               insert_weapon_usage_ranked_play_start_mmr_sql, 2, timedelta(seconds=600), dag)
