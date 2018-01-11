@@ -224,12 +224,12 @@ def stats_Writer(date_to_run):
     from as_s2.loot_v4_ext a 
     where productionlevel in ('Gold', 'TU1', 'MTX1') 
     and category in ('weapon', 'perk') 
+	and upper(reference) not like (%%ENLISTED%%, %%EXPERT%%, %%MASTER%%
     group by 1,2,3,4,5,6,7,8,9,10,11"""
     
-    lootrest_data_df = spark.sql(lootrest_data_query)
-    lootrest_data_df.createOrReplaceTempView("lootrest_data")
-    ## lootrest_data_df.show()
-    
+    lootrest_data_df = spark.sql(lootrest_data_query).where(~upper(col("reference")).like("%ENLISTED%") & ~upper(col("reference")).like("%EXPERT%") & ~upper(col("reference")).like("%MASTER%")) 
+	lootrest_data_df.createOrReplaceTempView("lootrest_data") 
+	    
     loadouts_data_query = """select dt, context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_client_user_id_l, context_data_players_loadouts_index,         division_l, name_s, explode(perkslots_al) as basic_trainings 
     from ads_ww2.fact_mp_match_data_players_loadouts
     where dt = cast('%s' as date)
@@ -287,7 +287,7 @@ def stats_Writer(date_to_run):
     									   , dt 
     									   from  ads_ww2.fact_mp_match_data_players 
     									   where dt = cast('%s' as date) 
-    									   and context_data_players_start_rank_i <=54 
+    									   and context_data_players_start_rank_i between 0 and 54
     									   and context_data_players_prestige_i between 0 and 10
     									   and context_data_match_common_is_private_match_b  = false) b 
     								   ON a.dt = b.dt 
@@ -318,7 +318,7 @@ def stats_Writer(date_to_run):
     ## Write Query to insert data into the Final table 
     
     insert_query = """ INSERT OVERWRITE TABLE as_s2.s2_division_basic_training_usage partition (raw_date) SELECT a.context_headers_title_id_s, a.division_l, a.basic_trainings, 'Weapon Class' as loot_group, a.player_rank, a.player_prestige, a.num_users, a.num_spawns, a.duration_played, b.reference, a.dt FROM division_usage_table a INNER JOIN lootrest_data b ON cast(a.basic_trainings as bigint) = b.loot_id 
-	where upper(b.reference) not like (%%ENLISTED%%, %%EXPERT%%, %%MASTER%%) 
+	) 
 	AND player_rank between 0 and 54  
 	AND player_prestige betwen 0 and 11 """
     
