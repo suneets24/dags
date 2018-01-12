@@ -75,7 +75,7 @@ Insert overwrite table as_s2.s2_divisions_dashboard
 with loot_table as 
 (
 select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionid is not null then 1 else 0 end) as is_collectible
-from as_s2.loot_v4_ext a 
+from as_s2.loot_v5_ext a 
 where productionlevel in ('Gold', 'TU1', 'MTX1') 
 AND trim(isloot) <> '' 
 and category in ('weapon') 
@@ -222,7 +222,7 @@ def stats_Writer(date_to_run):
     print(stats_date)
 
     lootrest_data_query = """select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base,         (case when collectionid is not null then 1 else 0 end) as is_collectible
-    from as_s2.loot_v4_ext a 
+    from as_s2.loot_v5_ext a 
     where productionlevel in ('Gold', 'TU1', 'MTX1') 
     and category in ('weapon', 'perk') 
     group by 1,2,3,4,5,6,7,8,9,10,11"""
