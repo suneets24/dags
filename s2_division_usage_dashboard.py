@@ -189,7 +189,8 @@ group by 1,2,3,4,5,9
 insert_division_usage_dashboard_task = qubole_operator('insert_division_usage_task',
                                               insert_division_usage_sql, 2, timedelta(seconds=600), dag) 
 
-basic_training_script = '''from pyspark.sql import SparkSession
+basic_training_script = '''
+from pyspark.sql import SparkSession
 spark = (SparkSession
             .builder
             .appName('Division Basic Training')
@@ -219,22 +220,17 @@ print(max_date)
 def stats_Writer(date_to_run):
     stats_date = date_to_run
     print(stats_date)
-			
+
     lootrest_data_query = """select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base,         (case when collectionid is not null then 1 else 0 end) as is_collectible
     from as_s2.loot_v4_ext a 
     where productionlevel in ('Gold', 'TU1', 'MTX1') 
     and category in ('weapon', 'perk') 
-	and upper(reference) not like (%%ENLISTED%%, %%EXPERT%%, %%MASTER%%
     group by 1,2,3,4,5,6,7,8,9,10,11"""
     
     lootrest_data_df = spark.sql(lootrest_data_query).where(~upper(col("reference")).like("%ENLISTED%") & ~upper(col("reference")).like("%EXPERT%") & ~upper(col("reference")).like("%MASTER%")) 
-	lootrest_data_df.createOrReplaceTempView("lootrest_data") 
-	    
-    loadouts_data_query = """select dt, context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_client_user_id_l, context_data_players_loadouts_index,         division_l, name_s, explode(perkslots_al) as basic_trainings 
-    from ads_ww2.fact_mp_match_data_players_loadouts
-    where dt = cast('%s' as date)
-    and inuse_b = TRUE 
-    and name_s like '%%custom%%'""" %( stats_date )
+    lootrest_data_df.createOrReplaceTempView("lootrest_data") 
+    
+    loadouts_data_query = """select dt, context_headers_title_id_s, context_data_match_common_matchid_s, context_data_players_client_user_id_l, context_data_players_loadouts_index,         division_l, name_s, explode(perkslots_al) as basic_trainings from ads_ww2.fact_mp_match_data_players_loadouts where dt = cast('%s' as date) and inuse_b = TRUE and name_s like '%%custom%%' """ %( stats_date )
     
     loadouts_data_df = spark.sql(loadouts_data_query)
     
@@ -242,85 +238,85 @@ def stats_Writer(date_to_run):
     loadouts_data_df=loadouts_data_df.filter(loadouts_data_df.basic_trainings != 0)
     
     lives_data_match_query = """select distinct b.context_headers_title_id_s
-    									  , a.victim_weapon_s 
-    									  , a.victim_weapon_guid_l 
-    									  , a.attacker_weapon_s 
-    									  , a.context_headers_event_id_s 
-    									  , a.context_data_match_common_matchid_s 
-    									  , a.victim_user_id 
-    									  , a.victim_loadout_index_i 
-    									  , a.attacker_user_id 
-    									  , a.spawn_time_ms_i 
-    									  , a.death_time_ms_i 
-    									  , a.duration_ms_i 
-    									  , b.context_data_players_start_rank_i as player_rank 
-    									  , b.context_data_players_prestige_i as player_prestige 
-    									  , b.dt 
-    						   from 
-    							   ( select context_headers_title_id_s 
-    									   , victim_weapon_s 
-    									   , victim_weapon_guid_l 
-    									   , attacker_weapon_s 
-    									   , context_headers_event_id_s 
-    									   , context_data_match_common_matchid_s 
-    									   , victim_user_id 
-    									   , victim_loadout_index_i 
-    									   , attacker_user_id 
-    									   , spawn_time_ms_i 
-    									   , death_time_ms_i 
-    									   , duration_ms_i 
-    									   , means_of_death_s 
-    									   , dt 
-    								   from ads_ww2.fact_mp_match_data_lives 
-    								   where dt =  cast('%s' as date)
-    								   and death_time_ms_i - spawn_time_ms_i < 3600000 ) a 
-    								   join ( select distinct context_headers_title_id_s 
-    									   , context_data_match_common_matchid_s 
-    									   , context_data_players_client_user_id_l 
-    									   , context_data_players_prestige_i 
-    									   , context_data_players_start_rank_i 
-    									   , context_headers_event_id_s 
-    									   , context_data_match_common_utc_start_time_i 
-    									   , context_data_match_common_life_count_i 
-    									   , context_data_match_common_player_count_i 
-    									   , context_data_match_common_has_bots_b 
-    									   , dt 
-    									   from  ads_ww2.fact_mp_match_data_players 
-    									   where dt = cast('%s' as date) 
-    									   and context_data_players_start_rank_i between 0 and 54
-    									   and context_data_players_prestige_i between 0 and 10
-    									   and context_data_match_common_is_private_match_b  = false) b 
-    								   ON a.dt = b.dt 
-    								   AND a.context_headers_title_id_s = b.context_headers_title_id_s 
-    								   AND a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
-    								   AND a.victim_user_id=b.context_data_players_client_user_id_l """ %( stats_date, stats_date)
+                                          , a.victim_weapon_s 
+                                          , a.victim_weapon_guid_l 
+                                          , a.attacker_weapon_s 
+                                          , a.context_headers_event_id_s 
+                                          , a.context_data_match_common_matchid_s 
+                                          , a.victim_user_id 
+                                          , a.victim_loadout_index_i 
+                                          , a.attacker_user_id 
+                                          , a.spawn_time_ms_i 
+                                          , a.death_time_ms_i 
+                                          , a.duration_ms_i 
+                                          , b.context_data_players_start_rank_i as player_rank 
+                                          , b.context_data_players_prestige_i as player_prestige 
+                                          , b.dt 
+                               from 
+                                   ( select context_headers_title_id_s 
+                                           , victim_weapon_s 
+                                           , victim_weapon_guid_l 
+                                           , attacker_weapon_s 
+                                           , context_headers_event_id_s 
+                                           , context_data_match_common_matchid_s 
+                                           , victim_user_id 
+                                           , victim_loadout_index_i 
+                                           , attacker_user_id 
+                                           , spawn_time_ms_i 
+                                           , death_time_ms_i 
+                                           , duration_ms_i 
+                                           , means_of_death_s 
+                                           , dt 
+                                       from ads_ww2.fact_mp_match_data_lives 
+                                       where dt =  cast('%s' as date)
+                                       and death_time_ms_i - spawn_time_ms_i < 3600000 ) a 
+                                       join ( select distinct context_headers_title_id_s 
+                                           , context_data_match_common_matchid_s 
+                                           , context_data_players_client_user_id_l 
+                                           , context_data_players_prestige_i 
+                                           , context_data_players_start_rank_i 
+                                           , context_headers_event_id_s 
+                                           , context_data_match_common_utc_start_time_i 
+                                           , context_data_match_common_life_count_i 
+                                           , context_data_match_common_player_count_i 
+                                           , context_data_match_common_has_bots_b 
+                                           , dt 
+                                           from  ads_ww2.fact_mp_match_data_players 
+                                           where dt = cast('%s' as date) 
+                                           and context_data_players_start_rank_i between 0 and 54
+                                           and context_data_players_prestige_i between 0 and 10
+                                           and context_data_match_common_is_private_match_b  = false) b 
+                                       ON a.dt = b.dt 
+                                       AND a.context_headers_title_id_s = b.context_headers_title_id_s 
+                                       AND a.context_data_match_common_matchid_s = b.context_data_match_common_matchid_s 
+                                       AND a.victim_user_id=b.context_data_players_client_user_id_l """ %( stats_date, stats_date)
     
     lives_data_match_df = spark.sql(lives_data_match_query)
     
     ## Create Merge AD 
     
     div_lives_match_df = lives_data_match_df.alias("lives").join(loadouts_data_df.alias("loadouts"), ((col("lives.context_headers_title_id_s") == col("loadouts.context_headers_title_id_s")) \
-    													   & (col("lives.context_data_match_common_matchid_s") == col("loadouts.context_data_match_common_matchid_s")) \
-    													   & (col("lives.victim_user_id") == col("loadouts.context_data_players_client_user_id_l"))), 'inner')\
-    													   .join(lootrest_data_df.alias("loot_d1"), (col("lives.victim_weapon_guid_l") == col("loot_d1.loot_id")), 'inner')\
-    													   .select(lives_data_match_df['*'], "loadouts.division_l", "loadouts.basic_trainings", "loot_d1.weapon_base", "loot_d1.loot_group") 
+                                                           & (col("lives.context_data_match_common_matchid_s") == col("loadouts.context_data_match_common_matchid_s")) \
+                                                           & (col("lives.victim_user_id") == col("loadouts.context_data_players_client_user_id_l"))), 'inner')\
+                                                           .join(lootrest_data_df.alias("loot_d1"), (col("lives.victim_weapon_guid_l") == col("loot_d1.loot_id")), 'inner')\
+                                                           .select(lives_data_match_df['*'], "loadouts.division_l", "loadouts.basic_trainings", "loot_d1.weapon_base", "loot_d1.loot_group") 
     
     agg_div_lives_match_df = (div_lives_match_df.groupBy("dt", "context_headers_title_id_s", "context_data_match_common_matchid_s", "victim_user_id", "weapon_base", "loot_group", "division_l", "basic_trainings", "player_rank", "player_prestige")\
-    										  .agg(count("victim_user_id").alias("num_spawns")
-    										  , F.sum((div_lives_match_df.death_time_ms_i - div_lives_match_df.spawn_time_ms_i)/1000.0 ).alias("duration_played")))\
-    										  .groupBy("dt", "context_headers_title_id_s", "division_l", "basic_trainings", "player_rank", "player_prestige")\
-    										  .agg(F.countDistinct("victim_user_id").alias("num_users")
-    										  , F.sum("num_spawns").alias("num_spawns")
-    										  , F.sum("duration_played").alias("duration_played"))
+                                              .agg(count("victim_user_id").alias("num_spawns")
+                                              , F.sum((div_lives_match_df.death_time_ms_i - div_lives_match_df.spawn_time_ms_i)/1000.0 ).alias("duration_played")))\
+                                              .groupBy("dt", "context_headers_title_id_s", "division_l", "basic_trainings", "player_rank", "player_prestige")\
+                                              .agg(F.countDistinct("victim_user_id").alias("num_users")
+                                              , F.sum("num_spawns").alias("num_spawns")
+                                              , F.sum("duration_played").alias("duration_played"))
     
     agg_div_lives_match_df.createOrReplaceTempView("division_usage_table")
     
     ## Write Query to insert data into the Final table 
     
     insert_query = """ INSERT OVERWRITE TABLE as_s2.s2_division_basic_training_usage partition (raw_date) SELECT a.context_headers_title_id_s, a.division_l, a.basic_trainings, 'Weapon Class' as loot_group, a.player_rank, a.player_prestige, a.num_users, a.num_spawns, a.duration_played, b.reference, a.dt FROM division_usage_table a INNER JOIN lootrest_data b ON cast(a.basic_trainings as bigint) = b.loot_id 
-	) 
-	AND player_rank between 0 and 54  
-	AND player_prestige betwen 0 and 11 """
+    ) 
+    AND player_rank between 0 and 54  
+    AND player_prestige betwen 0 and 11 """
     
     ## Final data Insert 
     
