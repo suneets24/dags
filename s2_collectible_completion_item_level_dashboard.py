@@ -52,8 +52,7 @@ def qubole_operator(task_id, sql, retries, retry_delay, dag):
         dag=dag)
 
 		
-insert_collectible_completion_item_sql = """Insert overwrite as_s2.s2_collectible_item_acquisition_dashboard 
-
+insert_collectible_completion_item_sql = """Insert overwrite as_s2.s2_collectible_item_acquisition_dashboard
 -- Filter Collecctible Items From Lootrest data 
 
 with collectible_items as
@@ -65,19 +64,36 @@ select collectionrewardid
 		, name
 		, reference
 		, description
-		, rarity 
-		, collection_type 
+		, rarity_s as rarity
+        , price		
+		, cast(collection_type as integer) as  collection_type
 		, case when productionlevel in ('Gold', 'TU1') then 'Launch Collection' 
                when productionlevel in ('MTX1') then 'Winter Collection' else productionlevel end as productionlevel
         , category 
-from as_s2.loot_v4_ext a 
+from as_s2.loot_v5_ext a 
 where productionlevel in ('Gold', 'TU1', 'MTX1')
 and collectionrewardid <> loot_id
 and collectionid > 0 
-AND trim(isloot) <> ''
+--AND trim(isloot) <> ''
 and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
-group by 1,2,3,4,5,6,7,8,9,10,11
+group by 1,2,3,4,5,6,7,8,9,10,11,12
 ), 
+
+
+--Collection_Cost
+
+temp_collection_price as 
+(
+select regexp_replace(regexp_replace(collection_name, 'MPUI_COLLECTION_', ''), 'LOOT_MTX1_COLLECTION_', '') as collection_name,
+sum(price) as collection_price 
+from as_s2.loot_v5_ext a 
+where productionlevel in ('Gold', 'TU1', 'MTX1')
+and collectionrewardid <> loot_id
+and collectionid > 0 
+--AND trim(isloot) <> ''
+and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
+group by 1
+),
 
 
 -- Get Player Cohort 
@@ -137,10 +153,14 @@ select y.player_type
         , y.collection_name
 		, y.collection_type
 		, y.productionlevel
+		, y.rarity
+		, y.price
+		, y.collection_price
 		, 1 as pool_size
 		, z.unique_users 
-		, count(distinct row(context_headers_title_id_s, context_headers_user_id_s))  as num_items 
-		, count(distinct row(context_headers_title_id_s, context_headers_user_id_s))*pow(z.unique_users, -1) as avg_of_items
+		, count(distinct row(y.context_headers_title_id_s, y.context_headers_user_id_s))  as num_items 
+		, count(distinct row(y.context_headers_title_id_s, y.context_headers_user_id_s))*pow(z.unique_users, -1) as avg_of_items
+		, sum(case when w.item_id_l is not null then 1 else 0 end ) as crafted_items
 		, y.category
 		, y.reference as item_name1
 		, y.description as item_name2
@@ -157,13 +177,18 @@ select distinct a.context_headers_title_id_s
 , b.description 
 , b.collectionrewardid 
 , b.collection_name 
-, b.category 
+, b.category
+, b.rarity
+, b.price 
 , b.collection_type 
 , b.productionlevel 
+, d.collection_price
 from 
 temp_inventory_data a 
 join collectible_items b 
     on a.item_id_l = b.loot_id 
+join temp_collection_price d
+on b.collection_name = d.collection_name
 join player_cohorts	 c 
     on a.context_headers_title_id_s = c.context_headers_title_id_s 
     and a.context_headers_user_id_s = cast(c.client_user_id_l as varchar)
@@ -177,7 +202,11 @@ from player_cohorts
 group by 1,2
 ) z 
 on y.player_type = z.player_type 
-group by 1,2,3,4,5,6,9,10,11,12""" 
+left join 
+(select distinct context_headers_user_id_s,item_id_l from ads_ww2.fact_mkt_purchaseskus_data_userdatachanges_inventoryitems) w
+on  y.context_headers_user_id_s = w.context_headers_user_id_s
+and y.item_id_l = w.item_id_l
+group by 1,2,3,4,5,6,7,8,9,13,14,15,16""" 
 
 insert_collectible_completion_item_task = qubole_operator('insert_collectible_completion_item_task',
                                               insert_collectible_completion_item_sql, 2, timedelta(seconds=600), dag) 
