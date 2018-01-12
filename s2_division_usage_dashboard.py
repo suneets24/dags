@@ -313,10 +313,7 @@ def stats_Writer(date_to_run):
     
     ## Write Query to insert data into the Final table 
     
-    insert_query = """ INSERT OVERWRITE TABLE as_s2.s2_division_basic_training_usage partition (raw_date) SELECT a.context_headers_title_id_s, a.division_l, a.basic_trainings, 'Weapon Class' as loot_group, a.player_rank, a.player_prestige, a.num_users, a.num_spawns, a.duration_played, b.reference, a.dt FROM division_usage_table a INNER JOIN lootrest_data b ON cast(a.basic_trainings as bigint) = b.loot_id 
-    ) 
-    AND player_rank between 0 and 54  
-    AND player_prestige betwen 0 and 11 """
+    insert_query = """ INSERT OVERWRITE TABLE as_s2.s2_division_basic_training_usage partition (raw_date) SELECT a.context_headers_title_id_s, a.division_l, a.basic_trainings, 'Weapon Class' as loot_group, a.player_rank, a.player_prestige, a.num_users, a.num_spawns, a.duration_played, b.reference, a.dt FROM division_usage_table a INNER JOIN lootrest_data b ON cast(a.basic_trainings as bigint) = b.loot_id """
     
     ## Final data Insert 
     
