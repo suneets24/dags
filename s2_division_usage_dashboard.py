@@ -76,7 +76,17 @@ with loot_table as
 (
 select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionid is not null then 1 else 0 end) as is_collectible
 from as_s2.loot_v5_ext a 
-where productionlevel in ('Gold', 'TU1', 'MTX1') 
+where upper(productionlevel) in 
+--('Gold', 'TU1', 'MTX1')  
+(select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
 AND trim(isloot) <> '' 
 and category in ('weapon') 
 group by 1,2,3,4,5,6,7,8,9,10,11
@@ -223,7 +233,7 @@ def stats_Writer(date_to_run):
 
     lootrest_data_query = """select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base,         (case when collectionid is not null then 1 else 0 end) as is_collectible
     from as_s2.loot_v5_ext a 
-    where productionlevel in ('Gold', 'TU1', 'MTX1') 
+    where productionlevel in (select distinct upper(event) from ((select event, date from as_s2.ww2_event_schedule_ext) union all (select 'Gold' , date  '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 ) union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )) where date <= date '{{DS_DATE_ADD(0)}}') 
     and category in ('weapon', 'perk') 
     group by 1,2,3,4,5,6,7,8,9,10,11"""
     
