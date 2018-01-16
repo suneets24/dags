@@ -231,7 +231,7 @@ def stats_Writer(date_to_run):
     stats_date = date_to_run
     print(stats_date)
 
-    lootrest_data_query = """select name, reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base,         (case when collectionid is not null then 1 else 0 end) as is_collectible
+    lootrest_data_query = """select name, upper(reference) as reference, description, rarity, 'Launch' as productionlevel, category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base,         (case when collectionid is not null then 1 else 0 end) as is_collectible
     from as_s2.loot_v5_ext a 
     where productionlevel in (select distinct upper(event) from ((select event, date from as_s2.ww2_event_schedule_ext) union all (select 'Gold' , date  '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 ) union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )) where date <= date '{{DS_DATE_ADD(0)}}') 
     and category in ('weapon', 'perk') 
