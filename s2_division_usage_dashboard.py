@@ -87,7 +87,7 @@ union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext lim
 ) 
 where date <= date '{{DS_DATE_ADD(0)}}'
 )
-AND trim(isloot) <> '' 
+AND isloot = 1 
 and category in ('weapon') 
 group by 1,2,3,4,5,6,7,8,9,10,11
 ),
