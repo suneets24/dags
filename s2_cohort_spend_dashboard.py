@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
 from quboleWrapper import qubole_wrapper, export_to_rdms
 
-query_type = 'dev_presto'
+query_type = 'prod_presto'
 
 # Set expected runtime in seconds, setting to 0 is 7200 seconds
 expected_runtime = 0
@@ -15,7 +15,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 12, 11),
+    'start_date': datetime(2017, 12, 16),
     'schedule_interval': '@daily'
 }
 

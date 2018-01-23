@@ -186,7 +186,7 @@ class SparkWrapper(object):
             self.monitor_command(command, program_with_tracking)
         except Exception as e:
             if command is None:
-                raise AirflowException('run_sql call for %s failed. No command Id available.\n%s' % (program, e))
+                raise AirflowException('run_sql call for %s failed. No command Id available.\n%s' % (sql_stmt, e))
             else:
                 raise AirflowException('run_sql call for %s failed. https://api.qubole.com/v2/analyze?command_id=%s\n%s'
                                        % (program, command.id, e))
@@ -219,7 +219,7 @@ class SparkWrapper(object):
 
         raise AirflowException(
             'Spark monitor_command call for %s failed. https://api.qubole.com/v2/analyze?command_id=%s'
-            % (program, command.id))
+            % (sql_stmt, command.id))
 
 
 class ExportToRDMS(object):

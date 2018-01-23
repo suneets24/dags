@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
 from quboleWrapper import qubole_wrapper, export_to_rdms
 
-query_type = 'dev_presto'
+query_type = 'prod_presto'
 
 # Set expected runtime in seconds, setting to 0 is 7200 seconds
 expected_runtime = 0
@@ -15,7 +15,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 11, 8),
+    'start_date': datetime(2017, 12, 6),
     'schedule_interval': '@daily'
 }
 
@@ -126,7 +126,6 @@ where transact_rank = 1
 group by 1,2,5
 """ 
 
-#### Please let me know if the task name is fine
 insert_currency_balance_task = qubole_operator('daily_end_of_day_currency_balance',
                                               insert_currency_balance_sql, 2, timedelta(seconds=600), dag) 
 

@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
 from quboleWrapper import qubole_wrapper, export_to_rdms
 
-query_type = 'dev_presto'
+query_type = 'prod_presto'
 
 # Set expected runtime in seconds, setting to 0 is 7200 seconds
 expected_runtime = 0
@@ -15,7 +15,7 @@ owner = "Analytic Services"
 default_args = {
     'owner': owner,
     'depends_on_past': False,
-    'start_date': datetime(2017, 11, 9),
+    'start_date': datetime(2017, 12, 6),
     'schedule_interval': '@daily'
 }
 
@@ -374,7 +374,8 @@ Select d.monday_date
 		when game_type_description = 'raid hc' then 'War Hardcore'
 		when game_type_description = 'hp hc' then 'Hardpoint Hardcore' 
 		when game_type_description = 'ctf hc' then 'Capture The Flag Hardcore'
-		when game_type_description = 'conf hc' then 'Kill Confirmed Hardcore'
+		when game_type_description = 'conf hc' then 'Kill Confirmed Hardcore' 
+		when game_type_description = 'gun' then 'Gun Game' 
 		else game_type_description 
         end as game_type 
 
@@ -401,6 +402,10 @@ Select d.monday_date
 		when playlist_id = 62 then 'Comp Hardpoint' 
 		when playlist_id = 63 then 'Comp Capture The Flag' 
 		when playlist_id = 64 then 'Comp Search and Destroy'
+		when playlist_id = 34 then 'Kill Confirmed Hardcore'
+		when playlist_id = 17 then 'Winter Carentan Hardcore'
+		when playlist_id = 28 then 'Gun Game'
+		when playlist_id = 35 then 'Mosh Pit'
         else cast(playlist_id as varchar) 
      end as playlist_id 
 		
@@ -422,7 +427,8 @@ Select d.monday_date
 		  when a.map_description = 'mp_raid_cobra' then 'Operation Breakout' 
           when a.map_description = 'mp_raid_bulge' then 'Operation Griffin' 	
           when a.map_description = 'mp_raid_aachen' then 'Operation Aachen' 	
-          when a.map_description = 'mp_raid_d_day' then 'Operation Neptune' 	  
+          when a.map_description = 'mp_raid_d_day' then 'Operation Neptune' 	
+		  when a.map_description = 'mp_carentan_s2_winter' then 'Winter Carentan' 	
 	      else a.map_description 
 	end as map_name 
 

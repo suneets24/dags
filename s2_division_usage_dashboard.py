@@ -4,7 +4,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.sensors import TimeSensor
 from quboleWrapper import qubole_wrapper, export_to_rdms, spark_wrapper
 
-query_type = 'dev_presto'
+query_type = 'prod_presto'
 
 # Set expected runtime in seconds, setting to 0 is 7200 seconds
 expected_runtime = 0
