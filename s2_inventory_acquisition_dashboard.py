@@ -77,14 +77,20 @@ SELECT name, reference, description, rarity,
 case when productionlevel in ('Gold', 'TU1') then 'Launch' else productionlevel end as productionlevel 
 , category, rarity_s, loot_id, loot_group , BaseWeaponReference as weapon_base, (case when collectionrewardid = loot_id then 2
     when collectionid > 0 then 1 else 0 end) as is_collectible
-FROM as_s2.loot_v4_ext a 
+FROM as_s2.loot_v5_ext a 
 join as_s2.s2_items_from_crates b 
 on a.loot_id = b.item_id_l 
-WHERE productionlevel in ('Gold', 'TU1', 'MTX1') 
-AND trim(isloot) <> ''
+WHERE upper(productionlevel) in ( select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
+AND isloot = 1 
 and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
---and reference not in ('playercard_social_3', 'playercard_zm_challenge_11', 'playercard_zm_challenge_01', 'playercard_social_4')
---and (b.item_id_l is not null or collectionrewardid = loot_id)
 GROUP by 1,2,3,4,5,6,7,8,9,10,11
 ),
 
@@ -148,36 +154,12 @@ player_cohorts as
 	, a.dt 
 	FROM ads_ww2.fact_session_data a 
 	left JOIN 
-	( SELECT network_id, context_headers_user_id_s,g_rev 
-	, case when player_ntile <= 1 then 'Active Superwhale' 
-			when player_ntile <= 20 then 'Active Whale' 
-			when player_ntile <= 50 then 'Active Dolphin' 
-			else 'Active Minnow' end as player_type 
-
-	FROM 
-	(
-		SELECT a.network_id, a.context_headers_user_id_s, g_rev, ntile(100) over (order by g_rev desc) as player_ntile 
-		FROM 
-			( SELECT context_headers_user_id_s 
-			, network_id 
-			, SUM(price_usd) as g_rev 
-			FROM  as_s2.ww2_mtx_consumables_staging 
-			WHERE dt <= date '{{DS_DATE_ADD(0)}}'
-			GROUP BY 1,2 
-			) a 
-		JOIN 
-		   (SELECT DISTINCT network_id, client_user_id_l 
-			FROM ads_ww2.fact_session_data 
-			WHERE dt between date '{{DS_DATE_ADD(-6)}}' AND date '{{DS_DATE_ADD(0)}}'
-			    ) b 
-		ON a.network_id = b.network_id 
-		AND a.context_headers_user_id_s = cast(b.client_user_id_l as varchar)
-		
-		) 
+	( select * from as_s2.s2_spenders_active_cohort_staging 
+	where raw_date = date '{{DS_DATE_ADD(0)}}' 
 	) b 
 	ON a.network_id = b.network_id 
-	AND cast(a.client_user_id_l as VARCHAR) = b.context_headers_user_id_s 
-	WHERE a.dt = date '{{DS_DATE_ADD(0)}}'
+	AND a.client_user_id_l = b.client_user_id 
+	WHERE a.dt = date '{{DS_DATE_ADD(0)}}' 
 ),
 
 -- Combine all the separate inventory tables to create one temporary table 
