@@ -66,11 +66,21 @@ select collectionrewardid
 		, case when productionlevel in ('Gold', 'TU1') then 'Launch Collection' 
                when productionlevel in ('MTX1') then 'Winter Collection' else productionlevel end as productionlevel
 
-from as_s2.loot_v4_ext a 
-where productionlevel in ('Gold', 'TU1', 'MTX1')
+from as_s2.loot_v5_ext a 
+where upper(productionlevel) in 
+--('Gold', 'TU1', 'MTX1')  
+(select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
 and collectionrewardid <> loot_id
 and collectionid > 0 
-AND trim(isloot) <> ''
+AND isloot <> 1
 and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
 group by 1,2,3,4,5,6,7,8,9,10
 ), 
@@ -205,7 +215,17 @@ select collectionrewardid
                when productionlevel in ('MTX1') then 'Winter Collection' else productionlevel end as productionlevel
         , category 
 from as_s2.loot_v5_ext a 
-where productionlevel in ('Gold', 'TU1', 'MTX1')
+where upper(productionlevel) in 
+--('Gold', 'TU1', 'MTX1')  
+(select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
 and collectionrewardid <> loot_id
 and collectionid > 0 
 --AND trim(isloot) <> ''
@@ -221,7 +241,17 @@ temp_collection_price as
 select regexp_replace(regexp_replace(collection_name, 'MPUI_COLLECTION_', ''), 'LOOT_MTX1_COLLECTION_', '') as collection_name,
 sum(price) as collection_price 
 from as_s2.loot_v5_ext a 
-where productionlevel in ('Gold', 'TU1', 'MTX1')
+where upper(productionlevel) in 
+--('Gold', 'TU1', 'MTX1')  
+(select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
 and collectionrewardid <> loot_id
 and collectionid > 0 
 --AND trim(isloot) <> ''
@@ -359,11 +389,21 @@ select collectionrewardid
 		, case when productionlevel in ('Gold', 'TU1') then 'Launch Collection' 
                when productionlevel in ('MTX1') then 'Winter Collection' else productionlevel end as productionlevel
 
-from as_s2.loot_v4_ext a 
-where productionlevel in ('Gold', 'TU1', 'MTX1')
+from as_s2.loot_v5_ext a 
+where upper(productionlevel) in 
+--('Gold', 'TU1', 'MTX1')  
+(select distinct upper(event) 
+from 
+(
+(select event, date from as_s2.ww2_event_schedule_ext)
+union all (select 'Gold' , date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+union all (select 'TU1', date '2017-11-03' from as_s2.ww2_event_schedule_ext limit 1 )
+) 
+where date <= date '{{DS_DATE_ADD(0)}}'
+)
 and collectionrewardid <> loot_id
 and collectionid > 0 
-AND trim(isloot) <> ''
+AND isloot <> 1
 and category in ('emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon') 
 group by 1,2,3,4,5,6,7,8,9,10
 ), 
