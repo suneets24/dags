@@ -160,7 +160,7 @@ where dt <= date '{{DS_DATE_ADD(0)}}'
 ) a 
 
 -- Filter crates and items 
-left join as_s2.loot_v4_ext b 
+left join as_s2.loot_v5_ext b 
 on a.item_id_l = b.loot_id 
 
 -- Map Player Type 
@@ -176,7 +176,33 @@ and a.context_headers_user_id_s = cast(c.client_user_id as varchar)
 where a.dt = date '{{DS_DATE_ADD(0)}}' 
 and trim(context_data_mmp_transaction_id_s) not in ('0', '') -- Exclude Transaction Id as 0 
 -- Filter Categories and Productionlevel 
-and ( b.category in ( 'emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon', 'consumable') or a.item_id_l in (1,2,5,6,75,12583025,12583026,12583027,12583028))
+and ( b.category in ( 'emote', 'grip', 'uniforms', 'weapon', 'playercard_title', 'playercard_icon', 'consumable') or a.item_id_l in 
+
+
+
+(
+
+select distinct loot_id from as_s2.loot_v5_ext
+where 
+productionlevel in 
+(
+  select upper(event) from as_s2.ww2_event_schedule_ext where date <= date '{{DS_DATE_ADD(0)}}'
+  union all (select 'Gold' as event from as_s2.ww2_event_schedule_ext limit 1 )
+  union all (select 'TU1' as event from as_s2.ww2_event_schedule_ext limit 1 )
+ )
+and reference like 'sd_%'
+
+
+
+
+
+
+)
+
+
+
+
+)
 -- Remove productionlevel filter as any and filter on lootrest data will drop armory credits ids
 --and b.productionlevel in ('Gold', 'TU1','MTX1')
 ),
