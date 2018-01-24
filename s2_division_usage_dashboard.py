@@ -190,7 +190,8 @@ select  case when platform = '5597' then 'PC'
        when division_l = 1 then 'Airborne' 
 	   when division_l = 2 then 'Armoured' 
 	   when division_l = 3 then 'Mountain' 
-	   when division_l = 4 then 'Expeditionary' 
+	   when division_l = 4 then 'Expeditionary'
+       when division_l = 5 then 'Resistance'	   
 	   end as Division
 , weapon_class,player_rank,player_prestige, count(distinct victim_user_id) as num_users, sum(num_spawns) as num_spawns, sum(duration_played) as duration_played, dt
 from temp_div_lives 
